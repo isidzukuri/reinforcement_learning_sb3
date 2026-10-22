@@ -29,8 +29,10 @@ environment = GridEnv()
 environment.generate()
 
 Stdout().call(environment)
+Stdout().call(environment, path=[[0, 0], [1, 0]])
 Exporter().call(environment, path_to_file="grid.csv")
 Png().call(environment, path_to_file="grid.png")
+Png().call(environment, path_to_file="grid-path.png", path=[[0, 0], [1, 0]])
 
 loaded_grid = Importer().call(path_to_file="grid.csv")
 ```

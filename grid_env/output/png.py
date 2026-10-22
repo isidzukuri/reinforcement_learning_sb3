@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from grid_env.grid_env import GridEnv
 
@@ -8,6 +8,7 @@ class Png:
         self,
         grid: GridEnv,
         path_to_file: Optional[str] = None,
+        path: Optional[List[List[int]]] = None,
     ) -> None:
         try:
             from PIL import Image, ImageDraw
@@ -31,11 +32,16 @@ class Png:
             grid.TYPES['bonus']['id']: (241, 196, 15),
             grid.TYPES['wall']['id']: (52, 73, 94),
         }
+        path_cells = {tuple(coordinates) for coordinates in path or []}
 
         for y in range(grid.height):
             for x in range(grid.width):
                 cell_type = grid.grid[y][x]
-                color = colors.get(cell_type, (255, 255, 255))
+                color = (
+                    (144, 238, 144)
+                    if (x, y) in path_cells
+                    else colors.get(cell_type, (255, 255, 255))
+                )
                 box = [
                     x * cell_size,
                     y * cell_size,
