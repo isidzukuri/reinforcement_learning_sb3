@@ -10,7 +10,7 @@ class ModelManagerTests(unittest.TestCase):
         env = object()
         expected_model = object()
 
-        with patch("agent.model.DQN", return_value=expected_model) as dqn:
+        with patch("agent.model_manager.DQN", return_value=expected_model) as dqn:
             model = ModelManager().create_new(env)
 
         self.assertIs(model, expected_model)
