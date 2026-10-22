@@ -2,8 +2,6 @@ import random
 from typing import List, Dict
 from collections import deque
 
-from grid_env.importer import Importer
-
 
 class GridEnv:
     TYPES = {
