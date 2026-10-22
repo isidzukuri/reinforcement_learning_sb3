@@ -17,28 +17,46 @@ class GymGridEnv(gym.Env):
         'wall': -10
     }
 
-    def __init__(self, grid_env: GridEnv, agent: Agent, max_steps: int = 200):
+    def __init__(self, agent: Agent, next_stages: List):
         super().__init__()
 
-        self.grid_env = grid_env
+        self.action_list = list(GridEnv.ACTIONS.keys())
+        self.action_space = spaces.Discrete(len(self.action_list))
+
         self.agent = agent
-        self.max_steps = max_steps
         self.current_step = 0
         self.current_episode_reward = 0
+        self.episodes_count = 0
+        self.episodes_successful = 0
+        self.next_stages = next_stages
+        self.all_stages_completed = False
 
         self.window_size = self.agent.window_size
         window_width, window_height = self.window_size
-
-        self.action_list = list(self.grid_env.ACTIONS.keys())
-        self.action_space = spaces.Discrete(len(self.action_list))
 
         self.observation_space = spaces.Box(
             low=-1, high=1,
             shape=(agent.TENSOR_LAYERS_COUNT, window_height, window_width),
             dtype=np.int32
-        )
+        )    
 
-        self.agent_pos: List[int] = self.grid_env.start
+    def set_stage(self, stage: object):
+        self.current_stage = stage
+        self.max_steps = stage['max_steps']
+        self.grid_env = GridEnv(size=stage['env_size'])
+        self.agent.memory_grid_width, self.agent.memory_grid_height = stage['env_size']
+        self.episodes_count = 0
+        self.episodes_successful = 0
+        self.reset()
+
+
+    def next_stage(self):
+        if len(self.next_stages) > 0:
+            stage = self.next_stages.pop(0)
+            self.set_stage(stage)
+        else:
+            self.all_stages_completed = True
+
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[np.ndarray, dict]:
         super().reset(seed=seed)
@@ -47,6 +65,7 @@ class GymGridEnv(gym.Env):
         self.current_step = 0
         self.current_episode_reward = 0
         self.agent_pos = self.grid_env.start
+        self.agent.reset()
 
         return self._get_obs(), self._get_info()
     
@@ -81,7 +100,25 @@ class GymGridEnv(gym.Env):
         info = self._get_info()
         info["cell_type"] = cell_type
 
+
+        if terminated or truncated:
+            self.episodes_count += 1
+        
+        if terminated and self.is_episode_successful():
+            self.episodes_successful +=1
+            if self.is_ready_for_next_stage():
+                self.next_stage()
+
         return observation, reward, terminated, truncated, info
+    
+
+    def is_ready_for_next_stage(self) -> bool:
+        return (self.episodes_successful / self.episodes_count) >= 0.8
+
+
+    def is_episode_successful(self) -> bool:
+        return self.current_stage['reward_treshold'] <= self.current_episode_reward
+
 
     def _compute_reward(self, cell_type: int) -> int:
         wall_id = self.grid_env.TYPES['wall']['id']

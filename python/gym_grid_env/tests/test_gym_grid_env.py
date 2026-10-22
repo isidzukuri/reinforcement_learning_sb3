@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 from gymnasium import spaces
@@ -9,6 +9,11 @@ from gym_grid_env import GymGridEnv
 
 class GymGridEnvTests(unittest.TestCase):
     def setUp(self):
+        self.grid_env_class = patch("gym_grid_env.gym_grid_env.GridEnv")
+        mocked_grid_env = self.grid_env_class.start()
+        self.addCleanup(self.grid_env_class.stop)
+        self.mocked_grid_env = mocked_grid_env
+
         self.grid = Mock()
         self.grid.ACTIONS = {
             "top": [0, -1],
@@ -41,9 +46,18 @@ class GymGridEnvTests(unittest.TestCase):
         )
         self.agent.consume_bonus.return_value = True
 
-        self.env = GymGridEnv(self.grid, self.agent, max_steps=2)
+        mocked_grid_env.ACTIONS = self.grid.ACTIONS
+        mocked_grid_env.return_value = self.grid
 
-    def test_initializes_gym_spaces_and_copies_start_position(self):
+        self.env = GymGridEnv(self.agent, next_stages=[])
+        self.env.set_stage({
+            "title": "initial",
+            "env_size": [3, 2],
+            "max_steps": 2,
+            "reward_treshold": 100,
+        })
+
+    def test_initializes_gym_spaces_from_agent_and_stage(self):
         self.assertIsInstance(self.env.action_space, spaces.Discrete)
         self.assertEqual(self.env.action_space.n, 4)
         self.assertEqual(self.env.action_list, ["top", "bottom", "left", "right"])
@@ -52,6 +66,32 @@ class GymGridEnvTests(unittest.TestCase):
         self.assertEqual(self.env.observation_space.dtype, np.dtype(np.int32))
         self.assertEqual(self.env.agent_pos, [0, 0])
         self.assertEqual(self.env.agent_pos, self.grid.start)
+        self.mocked_grid_env.assert_called_once_with(size=[3, 2])
+        self.assertEqual(self.env.max_steps, 2)
+
+    def test_set_stage_configures_grid_and_resets_agent_memory(self):
+        self.mocked_grid_env.reset_mock()
+        self.agent.reset.reset_mock()
+        self.grid.start = [1, 1]
+        stage = {
+            "title": "larger grid",
+            "env_size": [5, 4],
+            "max_steps": 20,
+            "reward_treshold": 150,
+        }
+
+        self.env.set_stage(stage)
+
+        self.assertIs(self.env.current_stage, stage)
+        self.assertEqual(self.env.max_steps, 20)
+        self.mocked_grid_env.assert_called_once_with(size=[5, 4])
+        self.assertIs(self.env.grid_env, self.grid)
+        self.assertEqual(self.env.agent_pos, [1, 1])
+        self.assertEqual(self.agent.memory_grid_width, 5)
+        self.assertEqual(self.agent.memory_grid_height, 4)
+        self.agent.reset.assert_called_once_with()
+        self.assertEqual(self.env.episodes_count, 0)
+        self.assertEqual(self.env.episodes_successful, 0)
 
     def test_reset_returns_observation_and_info_and_resets_episode_counters(self):
         self.env.current_step = 7
@@ -98,6 +138,8 @@ class GymGridEnvTests(unittest.TestCase):
         self.assertFalse(terminated)
         self.assertTrue(truncated)
         self.assertEqual(self.env.agent_pos, [1, 0])
+        self.assertEqual(self.env.episodes_count, 1)
+        self.assertEqual(self.env.episodes_successful, 0)
 
     def test_step_to_finish_terminates_and_awards_finish_reward(self):
         self.env.agent_pos = [1, 0]
@@ -109,6 +151,49 @@ class GymGridEnvTests(unittest.TestCase):
         self.assertFalse(truncated)
         self.assertEqual(info["cell_type"], self.grid.TYPES["finish"]["id"])
         self.assertEqual(self.env.agent_pos, [2, 0])
+        self.assertEqual(self.env.episodes_count, 1)
+        self.assertEqual(self.env.episodes_successful, 1)
+        self.assertTrue(self.env.all_stages_completed)
+
+    def test_episode_success_depends_on_stage_reward_threshold(self):
+        self.env.current_episode_reward = 99
+        self.assertFalse(self.env.is_episode_successful())
+
+        self.env.current_episode_reward = 100
+        self.assertTrue(self.env.is_episode_successful())
+
+    def test_stage_readiness_requires_at_least_eighty_percent_success(self):
+        self.env.episodes_count = 5
+        self.env.episodes_successful = 3
+        self.assertFalse(self.env.is_ready_for_next_stage())
+
+        self.env.episodes_successful = 4
+        self.assertTrue(self.env.is_ready_for_next_stage())
+
+    def test_next_stage_uses_next_queued_stage_and_resets_stage_counters(self):
+        next_stage = {
+            "title": "next",
+            "env_size": [4, 3],
+            "max_steps": 12,
+            "reward_treshold": 110,
+        }
+        self.env.next_stages.append(next_stage)
+        self.env.episodes_count = 5
+        self.env.episodes_successful = 4
+
+        self.env.next_stage()
+
+        self.assertIs(self.env.current_stage, next_stage)
+        self.assertEqual(self.env.max_steps, 12)
+        self.assertEqual(self.env.next_stages, [])
+        self.assertEqual(self.env.episodes_count, 0)
+        self.assertEqual(self.env.episodes_successful, 0)
+        self.assertFalse(self.env.all_stages_completed)
+
+    def test_next_stage_marks_curriculum_complete_when_queue_is_empty(self):
+        self.env.next_stage()
+
+        self.assertTrue(self.env.all_stages_completed)
 
     def test_step_into_wall_penalizes_without_moving(self):
         _, reward, terminated, truncated, info = self.env.step(1)
@@ -135,9 +220,8 @@ class GymGridEnvTests(unittest.TestCase):
             self.env.step(3)
 
     def test_max_possible_reward_uses_configured_bonus_count(self):
-        self.assertEqual(self.env.max_possible_reward, 120)
         self.grid.TYPES["bonus"]["count"] = 10
-        self.assertEqual(self.env.max_possible_reward, 120)
+        self.assertEqual(self.env.max_possible_reward, 200)
 
 
 if __name__ == "__main__":
