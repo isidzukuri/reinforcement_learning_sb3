@@ -33,21 +33,6 @@ class Agent:
         self.known_env_map = self._init_env_map()
 
 
-    @classmethod
-    def _validate_type_ids(cls, type_ids: Dict[str, int]) -> None:
-        missing_types = cls.REQUIRED_CELL_TYPES.difference(type_ids)
-        if missing_types:
-            missing = ", ".join(sorted(missing_types))
-            raise ValueError("type_ids is missing required keys: {}".format(missing))
-
-
-    def _init_env_map(self) -> np.ndarray:
-        return np.zeros(
-            (self.TENSOR_LAYERS_COUNT, self.memory_grid_height, self.memory_grid_width),
-            dtype=np.int32,
-        )
-
-
     def load_model(self, path: str) -> None:
         self.model = DQN.load(path)
 
@@ -87,18 +72,6 @@ class Agent:
                     elif channel_idx == self.TENSOR_LAYERS["WALL"]:
                         tensor[channel_idx, dy_local, dx_local] = 1
         return tensor
-
-
-    def _get_coords(self, agent_pos: List[int]) -> Tuple[int, int]:
-        if len(agent_pos) != 2:
-            raise ValueError("agent_pos must contain [x, y].")
-        agent_x, agent_y = agent_pos
-        if not (
-            0 <= agent_x < self.memory_grid_width
-            and 0 <= agent_y < self.memory_grid_height
-        ):
-            raise ValueError("agent_pos is outside the memory grid.")
-        return agent_x, agent_y
 
 
     def select_action(self, agent_pos: List[int], action_list: List[str]) -> str:
@@ -161,3 +134,29 @@ class Agent:
             self.known_env_map[self.TENSOR_LAYERS["BONUS"], grid_y, grid_x] = -1
             return True
         return False
+
+    @classmethod
+    def _validate_type_ids(cls, type_ids: Dict[str, int]) -> None:
+            missing_types = cls.REQUIRED_CELL_TYPES.difference(type_ids)
+            if missing_types:
+                missing = ", ".join(sorted(missing_types))
+                raise ValueError("type_ids is missing required keys: {}".format(missing))
+
+
+    def _init_env_map(self) -> np.ndarray:
+        return np.zeros(
+            (self.TENSOR_LAYERS_COUNT, self.memory_grid_height, self.memory_grid_width),
+            dtype=np.int32,
+        )
+    
+
+    def _get_coords(self, agent_pos: List[int]) -> Tuple[int, int]:
+            if len(agent_pos) != 2:
+                raise ValueError("agent_pos must contain [x, y].")
+            agent_x, agent_y = agent_pos
+            if not (
+                0 <= agent_x < self.memory_grid_width
+                and 0 <= agent_y < self.memory_grid_height
+            ):
+                raise ValueError("agent_pos is outside the memory grid.")
+            return agent_x, agent_y
