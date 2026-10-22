@@ -2,5 +2,6 @@
 
 from agent.agent import Agent
 from agent.cnn_policy import CNNPolicy
+from agent.model_manager import ModelManager
 
-__all__ = ["Agent", "CNNPolicy"]
+__all__ = ["Agent", "CNNPolicy", "ModelManager"]
