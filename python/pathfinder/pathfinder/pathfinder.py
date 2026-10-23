@@ -1,5 +1,3 @@
-from typing import List
-
 from agent import Agent, ModelManager
 from grid_env import GridEnv, Importer
 from grid_env.output.stdout import Stdout

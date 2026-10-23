@@ -1,6 +1,5 @@
 import random
 from typing import List, Dict
-from collections import deque
 
 
 class GridEnv:
