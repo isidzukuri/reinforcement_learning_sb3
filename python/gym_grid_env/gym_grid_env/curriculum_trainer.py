@@ -39,17 +39,17 @@ agent.model = model
 total_timesteps = 100000
 
 end_of_curriculum_callback = EndOfCurriculumCallback(env)
-progress_callback = StepIntervalProgressBar(total_timesteps=total_timesteps, update_interval=1000)
+# progress_callback = StepIntervalProgressBar(total_timesteps=total_timesteps, update_interval=1000)
 final_plot_callback = FinalPlottingCallback(env=env, update_interval=1000)
-peak_reward_callback = PeakRewardCallback(env)
+# peak_reward_callback = PeakRewardCallback(env)
 
 print("Starting DQN training with Curriculum Learning")
 model.learn(
     total_timesteps=total_timesteps,
     callback=[
         end_of_curriculum_callback,
-        peak_reward_callback,
-        progress_callback,
+        # peak_reward_callback,
+        # progress_callback,
         final_plot_callback
     ],
     progress_bar=False
