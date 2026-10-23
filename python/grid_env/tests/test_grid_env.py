@@ -76,6 +76,35 @@ class GridEnvTests(unittest.TestCase):
                 self.assertEqual(counts[object_ids["wall"]], 15)
                 self.assertEqual(counts[object_ids["empty"]], 79)
 
+    def test_generate_randomizes_start_along_path(self):
+        env = GridEnv([10, 10])
+        with (
+            patch("grid_env.grid_env.random.choice", side_effect=[True, False, False]),
+            patch("grid_env.grid_env.random.randrange", return_value=15),
+        ):
+            env.generate()
+
+        self.assertEqual(env.start, [4, 1])
+        self.assertEqual(env.path[0], env.start)
+        self.assertEqual(len(env.path), env.path_length)
+
+    def test_generate_builds_path_backwards_for_start_near_traversal_end(self):
+        env = GridEnv([10, 10])
+        with (
+            patch("grid_env.grid_env.random.choice", side_effect=[True, False, False]),
+            patch("grid_env.grid_env.random.randrange", return_value=99),
+        ):
+            env.generate()
+
+        self.assertEqual(env.start, [0, 9])
+        self.assertEqual(env.path[0], env.start)
+        self.assertEqual(len(env.path), env.path_length)
+        for first, second in zip(env.path, env.path[1:]):
+            self.assertEqual(
+                abs(first[0] - second[0]) + abs(first[1] - second[1]),
+                1,
+            )
+
     def test_generate_rejects_non_positive_dimensions(self):
         for size in ([0, 10], [10, 0], [-1, 10], [10, -1]):
             with self.subTest(size=size):

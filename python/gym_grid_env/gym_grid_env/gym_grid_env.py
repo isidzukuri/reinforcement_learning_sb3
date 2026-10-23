@@ -44,10 +44,12 @@ class GymGridEnv(gym.Env):
         self.current_stage = stage
         self.max_steps = stage['max_steps']
         self.grid_env = GridEnv(size=stage['env_size'])
+        self.grid_env.generate()
         self.agent.memory_grid_width, self.agent.memory_grid_height = stage['env_size']
         self.episodes_count = 0
         self.episodes_successful = 0
         self.reset()
+        print(f"\n--- CURRICULUM UPGRADE: Switching to {stage['title']} ---")
 
 
     def next_stage(self):

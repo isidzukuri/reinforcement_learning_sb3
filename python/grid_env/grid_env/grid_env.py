@@ -98,26 +98,15 @@ class GridEnv:
                 column_ys = ys if column_index % 2 == 0 else list(reversed(ys))
                 traversal.extend([[x, y] for y in column_ys])
 
-        rank = {(x, y): index for index, (x, y) in enumerate(traversal)}
-        start = traversal[0]
-        visited = {tuple(start)}
-        path = [start]
-        while len(path) < path_length:
-            x, y = path[-1]
-            neighbors = [
-                [x + dx, y + dy]
-                for dx, dy in self.ACTIONS.values()
-                if 0 <= x + dx < self.width and 0 <= y + dy < self.height
-                and (x + dx, y + dy) not in visited
-            ]
-            neighbors.sort(key=lambda coord: rank[tuple(coord)])
-            if not neighbors:
-                raise RuntimeError("DFS could not construct the required path.")
-            next_cell = neighbors[0]
-            path.append(next_cell)
-            visited.add(tuple(next_cell))
+        start_index = random.randrange(len(traversal))
+        if start_index + path_length <= len(traversal):
+            path = traversal[start_index:start_index + path_length]
+        else:
+            path = list(reversed(
+                traversal[start_index - path_length + 1:start_index + 1]
+            ))
 
-        self.start = start
+        self.start = path[0]
         self.path = path
         self.path_length = len(path)
 
