@@ -138,4 +138,3 @@ class GridEnv:
         ]
         for x, y in random.sample(bonus_candidates, self.TYPES['bonus']['count']):
             self.grid[y][x] = self.TYPES['bonus']['id']
-   
