@@ -12,7 +12,10 @@ class Stdout:
         print("=== GridEnv Configuration ===")
         print(f"Size (Width, Height): {grid.width, grid.height}")
         print(f"Start Coordinate: {grid.start}")
-        print(f"Actual Path Length: {grid.path_length}")
+        print(f"Generated Path Length: {grid.path_length}")
+        if path:
+            print(f"Actual Taken Path Length: {len(path)}")
+
         print("TYPES:")
         for name, props in grid.TYPES.items():
             print(f"  - {name}: {props}")
