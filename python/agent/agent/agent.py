@@ -1,5 +1,3 @@
-# TODO: extract class memory
-
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 
@@ -36,7 +34,7 @@ class Agent:
     def load_model(self, path: str) -> None:
         self.model = DQN.load(path)
 
-    
+
     def reset(self) -> None:
         self.known_env_map = self._init_env_map()
 
@@ -86,7 +84,7 @@ class Agent:
         if not 0 <= index < len(action_list):
             raise IndexError("The model selected an action outside action_list.")
         return action_list[index]
-    
+
 
     def update_memory(
         self,
@@ -134,6 +132,12 @@ class Agent:
             self.known_env_map[self.TENSOR_LAYERS["BONUS"], grid_y, grid_x] = -1
             return True
         return False
+        
+
+    def is_revisit(self, pos: List[int]) -> bool:
+        grid_x, grid_y = self._get_coords(pos)
+        return self.known_env_map[self.TENSOR_LAYERS["VISITED"], grid_y, grid_x] == 1
+    
 
     @classmethod
     def _validate_type_ids(cls, type_ids: Dict[str, int]) -> None:
@@ -148,7 +152,7 @@ class Agent:
             (self.TENSOR_LAYERS_COUNT, self.memory_grid_height, self.memory_grid_width),
             dtype=np.int32,
         )
-    
+
 
     def _get_coords(self, agent_pos: List[int]) -> Tuple[int, int]:
             if len(agent_pos) != 2:
