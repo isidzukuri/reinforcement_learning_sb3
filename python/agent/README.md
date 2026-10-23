@@ -52,6 +52,11 @@ one was present. `reset()` clears the map.
 `ModelManager.create_new` creates an untrained Stable-Baselines3 DQN model for
 an environment. Its CNN feature extractor expects observations with the same
 channel-first grid shape returned by `get_observation_tensor`.
+`ModelManager.load_from_file(path_tofile)` loads a saved DQN model and returns
+it. `ModelManager.export_to_onnx(model, export_to_path)` exports the model's
+Q-network to ONNX; the ONNX output contains Q-values for each action, so select
+an action with `argmax`. `ModelManager.load_onnx(from_path)` loads the exported
+file and returns an ONNX Runtime inference session.
 
 ```python
 from agent import ModelManager
@@ -59,7 +64,16 @@ from agent import ModelManager
 model = ModelManager().create_new(env)
 model.learn(total_timesteps=100_000)
 model.save("path/to/model")
+loaded_model = ModelManager().load_from_file("path/to/model.zip")
+ModelManager().export_to_onnx(loaded_model, "path/to/model.onnx")
+onnx_session = ModelManager().load_onnx("path/to/model.onnx")
 ```
 
 Load the saved model with `agent.load_model("path/to/model.zip")` before
 selecting actions.
+
+
+## Testing
+```
+python -m unittest discover -s tests -v
+```

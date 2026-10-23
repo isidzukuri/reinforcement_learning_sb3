@@ -1,8 +1,10 @@
 from typing import Dict, List, Optional, Tuple
-from enum import Enum
+from typing import Union
 
 import numpy as np
+import onnxruntime as ort
 from stable_baselines3 import DQN
+
 
 class Agent:
     REQUIRED_CELL_TYPES = {"empty", "finish", "bonus", "wall"}
@@ -27,7 +29,7 @@ class Agent:
         self.memory_grid_width, self.memory_grid_height = memory_grid_size
         self.window_size = window_size
         self.type_ids = type_ids
-        self.model: Optional[DQN] = None
+        self.model: Optional[Union[DQN, ort.InferenceSession]] = None
         self.known_env_map = self._init_env_map()
 
 
@@ -79,11 +81,33 @@ class Agent:
             raise ValueError("action_list must not be empty.")
 
         obs_tensor = self.get_observation_tensor(agent_pos)
-        action_idx, _ = self.model.predict(obs_tensor, deterministic=True)
-        index = int(np.asarray(action_idx).item())
+        if isinstance(self.model, ort.InferenceSession):
+            index = self._onnx_handler(obs_tensor)
+        else:
+            index = self._default_model_handler(obs_tensor)
+
         if not 0 <= index < len(action_list):
             raise IndexError("The model selected an action outside action_list.")
         return action_list[index]
+
+
+    def _default_model_handler(self, obs_tensor):
+        action_idx, _ = self.model.predict(obs_tensor, deterministic=True)
+        return int(np.asarray(action_idx).item())
+
+
+    def _onnx_handler(self, obs_tensor):
+        model_input = self.model.get_inputs()[0]
+        q_values = self.model.run(
+            None,
+            {
+                model_input.name: np.expand_dims(obs_tensor, axis=0).astype(
+                    np.float32
+                )
+            },
+        )[0]
+
+        return int(np.argmax(q_values[0]))
 
 
     def update_memory(

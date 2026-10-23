@@ -10,6 +10,8 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "numpy>=1.23",
+    "onnx>=1.14",
+    "onnxruntime>=1.16",
     "stable-baselines3>=2.0",
 ]
 

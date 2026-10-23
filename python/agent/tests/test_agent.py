@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -145,6 +146,37 @@ class AgentTests(unittest.TestCase):
         agent.model.predict.assert_called_once_with(
             predicted_observation,
             deterministic=True,
+        )
+
+    def test_select_action_runs_onnx_model_and_returns_highest_value_action(self):
+        class FakeInferenceSession:
+            def get_inputs(self):
+                return [SimpleNamespace(name="observations")]
+
+            def run(self, output_names, inputs):
+                self.output_names = output_names
+                self.inputs = inputs
+                return [np.array([[0.1, 0.8, 0.2, 0.3]], dtype=np.float32)]
+
+        agent = Agent(window_size=[3, 3], type_ids=self.TYPE_IDS)
+        session = FakeInferenceSession()
+
+        with patch("agent.agent.ort.InferenceSession", FakeInferenceSession):
+            agent.model = session
+            action = agent.select_action(
+                [1, 1],
+                ["up", "down", "left", "right"],
+            )
+
+        self.assertEqual(action, "down")
+        self.assertIsNone(session.output_names)
+        self.assertEqual(
+            session.inputs["observations"].shape,
+            (1, 6, 3, 3),
+        )
+        self.assertEqual(
+            session.inputs["observations"].dtype,
+            np.float32,
         )
 
     def test_select_action_rejects_model_index_outside_action_list(self):
