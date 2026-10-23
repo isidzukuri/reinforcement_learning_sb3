@@ -231,11 +231,16 @@ class GymGridEnvTests(unittest.TestCase):
         self.assertEqual(self.env.agent_pos, [0, 0])
         self.assertEqual(info["cell_type"], self.grid.TYPES["wall"]["id"])
 
-    def test_episode_reward_cannot_exceed_theoretical_maximum(self):
+    def test_episode_reward_can_exceed_theoretical_maximum(self):
         self.env.current_episode_reward = self.env.max_possible_reward
 
-        with self.assertRaisesRegex(ValueError, "exceeds the absolute theoretical maximum"):
-            self.env.step(3)
+        _, reward, _, _, _ = self.env.step(3)
+
+        self.assertEqual(reward, self.env.REWARDS["bonus"])
+        self.assertGreater(
+            self.env.current_episode_reward,
+            self.env.max_possible_reward,
+        )
 
     def test_max_possible_reward_uses_configured_bonus_count(self):
         self.grid.TYPES["bonus"]["count"] = 10

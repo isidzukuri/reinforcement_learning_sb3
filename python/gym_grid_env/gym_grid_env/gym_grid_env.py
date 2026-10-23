@@ -33,6 +33,7 @@ class GymGridEnv(gym.Env):
         self.recent_successes = deque(maxlen=100)
         self.next_stages = next_stages
         self.all_stages_completed = False
+
         self.episode_path = []
 
         self.window_size = self.agent.window_size
@@ -74,6 +75,7 @@ class GymGridEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[np.ndarray, dict]:
         super().reset(seed=seed)
 
+        
         if self.is_success_spree(10):
           self.regenerate_grid()
         # raise
@@ -110,13 +112,13 @@ class GymGridEnv(gym.Env):
         if cell_type != self.grid_env.TYPES['wall']['id']:
             self.agent_pos = [new_x, new_y]
 
-        self.episode_path.append(self.agent_pos)
+        # self.episode_path.append(self.agent_pos)
 
         reward = self._compute_reward(cell_type)
 
         self.current_episode_reward += reward
 
-        self._validate_reward_ceiling()
+        # self._validate_reward_ceiling()
 
         observation = self._get_obs()
         info = self._get_info()
@@ -135,10 +137,10 @@ class GymGridEnv(gym.Env):
                 self.next_stage()
 
         # if terminated:
-            # sc_rate = (self.episodes_successful / self.episodes_count)
-            # print(f"🎉 FINISH REACHED at position {new_x}, {new_y}! Terminated is True. Reward: {self.current_episode_reward}. Success rate: {sc_rate}" )
-            # print(cell_type)
-            # Stdout().call(self.grid_env, path=self.episode_path)
+        #   srate = (self.episodes_successful / self.episodes_count)
+          # print(f"🎉 FINISH REACHED at position {new_x}, {new_y}! Terminated is True. Reward: {self.current_episode_reward}. Success rate: {srate}" )
+        # print(cell_type)
+          # Stdout().call(self.grid_env, path=self.episode_path)
 
         return observation, reward, terminated, truncated, info
 
