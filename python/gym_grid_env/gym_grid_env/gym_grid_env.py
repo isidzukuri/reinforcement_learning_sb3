@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from typing import List, Optional, Tuple
+from collections import deque
 
 from agent import Agent
 from grid_env import GridEnv
@@ -14,7 +15,8 @@ class GymGridEnv(gym.Env):
         'empty': -1,
         'finish': 100,
         'bonus': 10,
-        'wall': -10
+        'wall': -10,
+        'revisit': -2
     }
 
     def __init__(self, agent: Agent, next_stages: List):
@@ -28,8 +30,10 @@ class GymGridEnv(gym.Env):
         self.current_episode_reward = 0
         self.episodes_count = 0
         self.episodes_successful = 0
+        self.recent_successes = deque(maxlen=100)
         self.next_stages = next_stages
         self.all_stages_completed = False
+        self.episode_path = []
 
         self.window_size = self.agent.window_size
         window_width, window_height = self.window_size
@@ -38,19 +42,26 @@ class GymGridEnv(gym.Env):
             low=-1, high=1,
             shape=(agent.TENSOR_LAYERS_COUNT, window_height, window_width),
             dtype=np.int32
-        )    
+        )
 
     def set_stage(self, stage: object):
         self.current_stage = stage
         self.max_steps = stage['max_steps']
-        self.grid_env = GridEnv(size=stage['env_size'])
-        self.grid_env.generate()
-        self.agent.memory_grid_width, self.agent.memory_grid_height = stage['env_size']
         self.episodes_count = 0
         self.episodes_successful = 0
+        self.recent_successes.clear()
+        self.regenerate_grid()
         self.reset()
         print(f"\n--- CURRICULUM UPGRADE: Switching to {stage['title']} ---")
+        # Stdout().call(self.grid_env)
 
+
+    def regenerate_grid(self):
+        self.grid_env = GridEnv(size=self.current_stage['env_size'])
+        self.grid_env.generate()
+        self.agent.memory_grid_width, self.agent.memory_grid_height = self.current_stage['env_size']
+        print(f"\n--- MAP IS REGENERATED. Recent successes {sum(self.recent_successes)}/100 ---")
+        
 
     def next_stage(self):
         if len(self.next_stages) > 0:
@@ -63,14 +74,21 @@ class GymGridEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[np.ndarray, dict]:
         super().reset(seed=seed)
 
+        if self.is_success_spree(10):
+          self.regenerate_grid()
+        # raise
+        # print("+++++++++++++++++++++++++")
+        # Stdout().call(self.grid_env, path=self.episode_path)
+
         # Reset step counter on every new episode
         self.current_step = 0
         self.current_episode_reward = 0
         self.agent_pos = self.grid_env.start
         self.agent.reset()
+        self.episode_path = []
 
         return self._get_obs(), self._get_info()
-    
+
 
     def step(self, action: int) -> Tuple[np.ndarray, int, bool, bool, dict]:
         self.current_step += 1
@@ -92,6 +110,8 @@ class GymGridEnv(gym.Env):
         if cell_type != self.grid_env.TYPES['wall']['id']:
             self.agent_pos = [new_x, new_y]
 
+        self.episode_path.append(self.agent_pos)
+
         reward = self._compute_reward(cell_type)
 
         self.current_episode_reward += reward
@@ -102,24 +122,41 @@ class GymGridEnv(gym.Env):
         info = self._get_info()
         info["cell_type"] = cell_type
 
-
         if terminated or truncated:
             self.episodes_count += 1
-        
-        if terminated and self.is_episode_successful():
-            self.episodes_successful +=1
+
+            episode_success = terminated and self.is_episode_successful()
+            if episode_success:
+                self.episodes_successful += 1
+            
+            self.recent_successes.append(1 if episode_success else 0)
+
             if self.is_ready_for_next_stage():
                 self.next_stage()
 
+        # if terminated:
+            # sc_rate = (self.episodes_successful / self.episodes_count)
+            # print(f"🎉 FINISH REACHED at position {new_x}, {new_y}! Terminated is True. Reward: {self.current_episode_reward}. Success rate: {sc_rate}" )
+            # print(cell_type)
+            # Stdout().call(self.grid_env, path=self.episode_path)
+
         return observation, reward, terminated, truncated, info
-    
+
 
     def is_ready_for_next_stage(self) -> bool:
-        return (self.episodes_successful / self.episodes_count) >= 0.8
+        return (sum(self.recent_successes) == 100)
 
 
     def is_episode_successful(self) -> bool:
         return self.current_stage['reward_treshold'] <= self.current_episode_reward
+
+    
+    def is_success_spree(self, items_count) -> bool:
+        if len(self.recent_successes) < items_count:
+            return False
+
+        recent_list = list(self.recent_successes)
+        return sum(recent_list[-items_count:]) == items_count
 
 
     def _compute_reward(self, cell_type: int) -> int:
@@ -133,6 +170,9 @@ class GymGridEnv(gym.Env):
             return self.REWARDS['finish']
         if cell_type == bonus_id and self.agent.consume_bonus(self.agent_pos): # bonus can be consumed only once
             return self.REWARDS['bonus']
+        if self.agent.is_revisit(self.agent_pos):
+            return self.REWARDS['empty'] + self.REWARDS['revisit']
+
         return self.REWARDS['empty']
 
     def _validate_reward_ceiling(self) -> None:
@@ -153,4 +193,4 @@ class GymGridEnv(gym.Env):
 
     @cached_property
     def max_possible_reward(self):
-        return self.REWARDS['finish'] + self.REWARDS['bonus'] * self.grid_env.TYPES['bonus']['count']
+        return (self.REWARDS['finish'] + self.REWARDS['bonus'] * self.grid_env.TYPES['bonus']['count'])
