@@ -45,6 +45,7 @@ class GymGridEnvTests(unittest.TestCase):
             (6, 3, 3), dtype=np.int32
         )
         self.agent.consume_bonus.return_value = True
+        self.agent.is_revisit.return_value = False
 
         mocked_grid_env.ACTIONS = self.grid.ACTIONS
         mocked_grid_env.return_value = self.grid
@@ -119,6 +120,20 @@ class GymGridEnvTests(unittest.TestCase):
         self.assertEqual(info, {"agent_pos": [2, 1], "cell_type": 0})
         self.assertEqual(observation.shape, (6, 3, 3))
 
+    def test_revisit_receives_additional_penalty(self):
+        self.agent.is_revisit.return_value = True
+        self.agent.consume_bonus.return_value = False
+
+        _, reward, terminated, truncated, _ = self.env.step(3)
+
+        self.assertEqual(
+            reward,
+            self.env.REWARDS["empty"] + self.env.REWARDS["revisit"],
+        )
+        self.assertFalse(terminated)
+        self.assertFalse(truncated)
+        self.agent.is_revisit.assert_called_once_with([1, 0])
+
     def test_bonus_is_rewarded_only_when_agent_consumes_it(self):
         observation, reward, terminated, truncated, info = self.env.step(3)
 
@@ -143,6 +158,7 @@ class GymGridEnvTests(unittest.TestCase):
 
     def test_step_to_finish_terminates_and_awards_finish_reward(self):
         self.env.agent_pos = [1, 0]
+        self.env.recent_successes.extend([1] * 99)
 
         _, reward, terminated, truncated, info = self.env.step(3)
 
@@ -162,13 +178,15 @@ class GymGridEnvTests(unittest.TestCase):
         self.env.current_episode_reward = 100
         self.assertTrue(self.env.is_episode_successful())
 
-    def test_stage_readiness_requires_at_least_eighty_percent_success(self):
-        self.env.episodes_count = 5
-        self.env.episodes_successful = 3
+    def test_stage_readiness_requires_one_hundred_recent_successes(self):
+        self.env.recent_successes.extend([1] * 99)
         self.assertFalse(self.env.is_ready_for_next_stage())
 
-        self.env.episodes_successful = 4
+        self.env.recent_successes.append(1)
         self.assertTrue(self.env.is_ready_for_next_stage())
+
+        self.env.recent_successes[-1] = 0
+        self.assertFalse(self.env.is_ready_for_next_stage())
 
     def test_next_stage_uses_next_queued_stage_and_resets_stage_counters(self):
         next_stage = {
