@@ -1,51 +1,73 @@
-# RL Python Packages
+# RL Grid Pathfinder
 
-This repository contains the `agent`, `grid_env`, and `gym_grid_env` Python
-packages under `python/`.
+This repository combines Python-based reinforcement learning, ONNX-backed
+inference, and a Rust solver for grid-world pathfinding. The project is
+organized around a reusable grid environment, DQN training code, and a fast
+compiled solver that can be benchmarked against the Python version.
 
-## Running all tests
+## Overview
 
-From the repository root, run each package's `unittest` suite with:
+The codebase includes:
+
+- Python packages for generating grid environments and running agents
+- DQN model creation, training, and export to ONNX
+- A pathfinding wrapper that runs an agent
+- A Rust implementation of the solver and a small HTTP service
+- Benchmark scripts and notebooks for experimentation and comparison
+
+## Repository layout
+
+- `jupiter/` — notebooks used for experimentation and model analysis. Read for detailed description of project.
+- `python/` — packages used for model training
+- `python/pathfinder/` — helper that loads a grid and runs an ONNX-backed agent
+- `rust/pathfinder/` — Rust implementation of the grid environment and solver
+- `rust/pathfinder_service/` — HTTP API that accepts grid input and returns a path
+- `benchmarks/` — sample data, generated artifacts, and Python/Rust comparison scripts
+
+## Prerequisites
+
+- Python 3.9+
+- `pip` for installing local packages
+- `cargo` if you want to build or run the Rust solver/service
+
+## Quick start
+
+For a complete end-to-end flow, see the package READMEs under `python/` and the
+benchmark scripts in `benchmarks/`.
+
+## Python packages
+
+The Python side is split into libraries:
+
+- `grid-env` creates grid maps, renders them, and exports/imports CSV files
+- `grid-agent` manages memory maps and DQN model inference
+- `pathfinder` loads CSV grids and uses an ONNX model to solve them
+
+## Rust pathfinder and service
+
+The Rust implementation lives in `rust/pathfinder/` and can be built directly:
 
 ```bash
-export PYTHONPATH=python/agent:python/grid_env:python/gym_grid_env
-for dir in python/*/tests; do
-  .venv/bin/python -m unittest discover -s "$dir" || exit 1
-done
+cd rust/pathfinder
+cargo run
 ```
 
-This uses the repository virtual environment at `.venv` and stops if a suite
-fails.
-
-## Rust crate
-
-The `rust/pathfinder` crate exposes Rust modules for CSV-backed grid
-environments, ONNX model loading, and agent memory/inference. Its tests can be
-run from the repository root with:
+The service crate exposes a small HTTP API for solving grids from CSV input:
 
 ```bash
-cargo test --manifest-path rust/pathfinder/Cargo.toml
+cd rust/pathfinder_service
+cargo run
 ```
 
-The agent expects a six-layer observation and a positive, odd `[width, height]`
-window matching the ONNX model's input dimensions:
+By default the service listens on `0.0.0.0:3005` and loads `model.onnx` from
+its local directory. For more details, see `rust/pathfinder_service/README.md`.
 
-```rust
-use std::collections::HashMap;
-use pathfinder::agent::Agent;
-use pathfinder::grid_env::{grid_env_from_csv, print_to_stdout};
+## Research and notebooks
 
-let types = HashMap::from([
-    ("empty".to_string(), 0),
-    ("finish".to_string(), 1),
-    ("bonus".to_string(), 2),
-    ("wall".to_string(), 3),
-]);
-let mut agent = Agent::new(types, [5, 5], [15, 15])?;
-agent.load_model("benchmarks/runtime/model.onnx")?;
-let actions = ["top", "bottom", "left", "right"].map(str::to_string);
-let action = agent.select_action([7, 7], &actions)?;
+The `jupiter/` directory contains notebooks used for experimentation, iteration,
+and model analysis. These notebooks complement the packaged code and are a
+useful place to inspect training logic and result generation.
 
-let grid = grid_env_from_csv("benchmarks/runtime/grid_output.csv")?;
-print_to_stdout(&grid);
-```
+## Notes
+
+Its just Proof Of Concept!
