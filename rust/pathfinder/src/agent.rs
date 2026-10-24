@@ -151,9 +151,6 @@ impl Agent {
         agent_pos: [usize; 2],
         grid_env: &GridEnv,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let window_width = self.window_size[0];
-        let window_height = self.window_size[1];
-
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
@@ -173,7 +170,7 @@ impl Agent {
         grid_env.for_each_in_window(
             agent_pos,
             self.window_size,
-            |local_x, local_y, grid_x, grid_y, cell_type| {
+            |_local_x, _local_y, grid_x, grid_y, cell_type| {
                 if grid_x < 0 || grid_x >= memory_width || grid_y < 0 || grid_y >= memory_height {
                     return;
                 }
