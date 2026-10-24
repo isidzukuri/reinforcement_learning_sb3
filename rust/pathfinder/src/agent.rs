@@ -36,12 +36,10 @@ pub struct Agent {
     window_size: [usize; 2],
     memory_grid_size: [usize; 2],
     known_env_map: Tensor<f32>,
-    observation_tensor_size: usize,
 }
 
 impl Agent {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
-        let observation_tensor_size = TensorLayer::len() * window_size[1] * window_size[0];
         let known_env_map =
             Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
 
@@ -49,8 +47,7 @@ impl Agent {
             model,
             window_size,
             memory_grid_size,
-            known_env_map: known_env_map,
-            observation_tensor_size: observation_tensor_size,
+            known_env_map,
         }
     }
 
@@ -116,7 +113,7 @@ impl Agent {
             }
         }
 
-        let shape = [1, self.observation_tensor_size];
+        let shape = [1, num_channels, window_height, window_width];
         let tensor = OrtTensor::from_array((shape, tensor_data.into_vec()))?;
 
         Ok(tensor)
@@ -128,14 +125,17 @@ impl Agent {
     ) -> Result<Action, Box<dyn std::error::Error>> {
         let obs_tensor = self.get_observation_tensor(agent_pos)?;
         let outputs = self.model.run(ort::inputs![obs_tensor])?;
-        // let outputs = self.model.run(ort::inputs!["input" => obs_tensor]?)?;
 
         let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+
+        // Find the index of the maximum non-NaN value (Argmax)
         let action_index = data
-            .first()
-            .copied()
-            .expect("Model output tensor is empty; expected at least one action index")
-            as usize;
+            .iter()
+            .enumerate()
+            .filter(|&(_, &v)| !v.is_nan())
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(idx, _)| idx)
+            .expect("Model output tensor contains no valid action values");
 
         let action = Action::ALL
             .get(action_index)
