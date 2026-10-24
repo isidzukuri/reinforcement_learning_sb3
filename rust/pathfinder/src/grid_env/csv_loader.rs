@@ -8,7 +8,7 @@ use crate::tensor::Tensor;
 pub struct CsvLoader;
 
 impl CsvLoader {
-    pub fn load(path_to_file: &Path) -> Result<GridEnv, Box<dyn std::error::Error>> {
+    pub fn call(path_to_file: &Path) -> Result<GridEnv, Box<dyn std::error::Error>> {
         let file = File::open(path_to_file)?;
         let reader = BufReader::new(file);
 
@@ -23,37 +23,11 @@ impl CsvLoader {
                 continue;
             }
 
-            if let Some(content) = trimmed.strip_prefix('#') {
-                if let Some((metadata, value)) = content.split_once(':') {
-                    let metadata = metadata.trim();
-                    let value = value.trim();
-
-                    if metadata == "start" {
-                        let coordinates: Result<Vec<usize>, _> = value
-                            .split(',')
-                            .map(|s| s.trim().parse::<usize>())
-                            .collect();
-
-                        let coords = coordinates.map_err(|_| "Invalid start metadata.")?;
-                        if coords.len() != 2 {
-                            return Err("Start metadata must contain two coordinates.".into());
-                        }
-                        start = [coords[0], coords[1]];
-                    } else if metadata == "path_length" {
-                        path_length = value
-                            .parse::<usize>()
-                            .map_err(|_| "Invalid path_length metadata.")?;
-                    }
-                }
+            if let Ok(true) = Self::parse_header_line(&line, &mut start, &mut path_length) {
                 continue;
             }
 
-            let row: Result<Vec<CellType>, _> = trimmed
-                .split(',')
-                .map(|val| val.trim().parse::<CellType>())
-                .collect();
-            let row = row?;
-            if !row.is_empty() {
+            if let Some(row) = Self::parse_data_line(&line)? {
                 rows.push(row);
             }
         }
@@ -76,5 +50,60 @@ impl CsvLoader {
             start,
             path_length,
         })
+    }
+
+    fn parse_header_line(
+        line: &str,
+        start: &mut [usize; 2],
+        path_length: &mut usize,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        let Some(content) = line.trim().strip_prefix('#') else {
+            return Ok(false);
+        };
+
+        let Some((metadata, value)) = content.split_once(':') else {
+            return Ok(true);
+        };
+
+        let metadata = metadata.trim();
+        let value = value.trim();
+
+        if metadata == "start" {
+            let coordinates: Result<Vec<usize>, _> = value
+                .split(',')
+                .map(|s| s.trim().parse::<usize>())
+                .collect();
+
+            let coords = coordinates.map_err(|_| "Invalid start metadata.")?;
+            if coords.len() != 2 {
+                return Err("Start metadata must contain two coordinates.".into());
+            }
+            *start = [coords[0], coords[1]];
+        } else if metadata == "path_length" {
+            *path_length = value
+                .parse::<usize>()
+                .map_err(|_| "Invalid path_length metadata.")?;
+        }
+
+        Ok(true)
+    }
+
+    fn parse_data_line(line: &str) -> Result<Option<Vec<CellType>>, Box<dyn std::error::Error>> {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            return Ok(None);
+        }
+
+        if trimmed.starts_with('#') {
+            return Ok(None);
+        }
+
+        let row: Result<Vec<CellType>, _> = trimmed
+            .split(',')
+            .map(|val| val.trim().parse::<CellType>())
+            .collect();
+        let row = row?;
+
+        Ok(if row.is_empty() { None } else { Some(row) })
     }
 }

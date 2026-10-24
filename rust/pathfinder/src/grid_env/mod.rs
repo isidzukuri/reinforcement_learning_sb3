@@ -123,7 +123,7 @@ mod tests {
         let csv_path = unique_temp_file("grid_env");
         fs::write(&csv_path, "# start: 2, 3\n# path_length: 8\n0,1,0\n1,2,1\n").unwrap();
 
-        let env = CsvLoader::load(csv_path.as_path()).unwrap();
+        let env = CsvLoader::call(csv_path.as_path()).unwrap();
 
         assert_eq!(env.width, 3);
         assert_eq!(env.height, 2);
@@ -148,11 +148,11 @@ mod tests {
     fn csv_loader_rejects_empty_or_invalid_files() {
         let empty_path = unique_temp_file("empty_grid");
         fs::write(&empty_path, "").unwrap();
-        assert!(CsvLoader::load(empty_path.as_path()).is_err());
+        assert!(CsvLoader::call(empty_path.as_path()).is_err());
 
         let invalid_metadata = unique_temp_file("invalid_grid");
         fs::write(&invalid_metadata, "# start: invalid\n").unwrap();
-        assert!(CsvLoader::load(invalid_metadata.as_path()).is_err());
+        assert!(CsvLoader::call(invalid_metadata.as_path()).is_err());
 
         fs::remove_file(&empty_path).ok();
         fs::remove_file(&invalid_metadata).ok();
@@ -163,7 +163,7 @@ mod tests {
         let csv_path = unique_temp_file("ragged_grid");
         fs::write(&csv_path, "0,1\n2\n").unwrap();
 
-        assert!(CsvLoader::load(csv_path.as_path()).is_err());
+        assert!(CsvLoader::call(csv_path.as_path()).is_err());
 
         fs::remove_file(&csv_path).unwrap();
     }

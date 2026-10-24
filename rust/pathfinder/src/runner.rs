@@ -6,7 +6,7 @@ use crate::model_loader;
 
 pub fn call(grid_file_path: impl AsRef<Path>, model_file_path: impl AsRef<Path>) {
     let grid_env =
-        CsvLoader::load(grid_file_path.as_ref()).expect("failed to load grid from CSV file");
+        CsvLoader::call(grid_file_path.as_ref()).expect("failed to load grid from CSV file");
     let model = model_loader::call(model_file_path).expect("failed to load ONNX model");
     let agent = Agent::new(
         model,
