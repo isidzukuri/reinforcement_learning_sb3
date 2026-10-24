@@ -44,6 +44,5 @@ curl -X POST http://localhost:3005/solve \
 ```
 
 The response is JSON with `success`, `errors`, and `path` fields. Coordinates
-in `path` are `[x, y]` pairs. Each request loads its own ONNX inference session,
-so requests do not share mutable model session state. Request bodies are limited
+in `path` are `[x, y]` pairs. Request bodies are limited
 to 2 MiB.
