@@ -1,11 +1,7 @@
 # Grid Env
 
-`grid-env` is a package for generating grid environments and
-importing or exporting them as CSV.
+`grid-env` is a package for generating grid environments and importing or exporting them as CSV.
 
-CSV exports include `GridEnv.start` and `GridEnv.path_length` as comment
-metadata before the grid rows. The importer restores these values and returns
-a `GridEnv`.
 
 ## Usage
 
