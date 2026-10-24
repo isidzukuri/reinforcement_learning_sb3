@@ -5,7 +5,7 @@ inference, and a Rust solver for grid-world pathfinding. The project is
 organized around a reusable grid environment, DQN training code, and a fast
 compiled solver that can be benchmarked against the Python version.
 
-![Rust pathfinder benchmark output](benchmarks/runtime/rust_pathfinder_output.jpg)
+<img src="benchmarks/runtime/rust_pathfinder_output.jpg" width="300" alt="Rust pathfinder benchmark output">
 
 ## Overview
 The codebase includes:
