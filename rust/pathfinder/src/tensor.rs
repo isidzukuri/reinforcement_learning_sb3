@@ -103,6 +103,15 @@ impl<T> Tensor<T> {
     {
         self.channel_mut(channel).fill(value);
     }
+
+    /// Fills the entire tensor's flat underlying buffer with a specified value.
+    #[inline]
+    pub fn fill(&mut self, value: T)
+    where
+        T: Clone,
+    {
+        self.data.fill(value);
+    }
 }
 
 #[cfg(test)]
@@ -217,5 +226,22 @@ mod tests {
         assert_eq!(tensor.channel(1), &[1.0, 1.0, 1.0, 1.0]);
         // Check channel 2 remains default (0.0)
         assert_eq!(tensor.channel(2), &[0.0, 0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_tensor_fill_entire_tensor() {
+        // Create a 2-channel, 2x2 tensor (8 elements total)
+        let mut tensor: Tensor<i32> = Tensor::new(2, 2, 2);
+
+        // Initially all zeros
+        assert_eq!(tensor.as_slice(), &[0, 0, 0, 0, 0, 0, 0, 0]);
+
+        // Fill the entire tensor with 42
+        tensor.fill(42);
+
+        // Verify every element across all channels, rows, and columns is 42
+        assert_eq!(tensor.as_slice(), &[42, 42, 42, 42, 42, 42, 42, 42]);
+        assert_eq!(*tensor.get(0, 0, 0), 42);
+        assert_eq!(*tensor.get(1, 1, 1), 42);
     }
 }

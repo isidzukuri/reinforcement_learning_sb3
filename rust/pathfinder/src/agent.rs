@@ -55,11 +55,7 @@ impl Agent {
     }
 
     pub fn reset(&mut self) {
-        self.known_env_map = Tensor::new(
-            TensorLayer::len(),
-            self.memory_grid_size[1],
-            self.memory_grid_size[0],
-        );
+        self.known_env_map.fill(0.0);
     }
 
     /// Extracts the local observation window tensor around the agent's position.
