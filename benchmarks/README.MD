@@ -48,6 +48,16 @@ path highlighted.
 
 Benchmarked on Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz.
 
+Both implementations run on the same generated 15x15 grid:
+
+![Generated 15x15 benchmark grid](runtime/grid_output.png)
+
+The Python and Rust implementations produce the following path outputs:
+
+| Python | Rust |
+| --- | --- |
+| ![Python Pathfinder output](runtime/python_pathfinder_output.jpg) | ![Rust Pathfinder output](runtime/rust_pathfinder_output.jpg) |
+
 ```
 sudo apt install hyperfine
 hyperfine --runs 100 \
@@ -65,6 +75,5 @@ Benchmark 2: run_pathfinder.py
   Range (min … max):    2.113 s …  2.928 s    100 runs
  
 Summary
-  './pathfinder' ran
-   76.06 ± 14.33 times faster than 'run_pathfinder.py'
+  './pathfinder' ran 76.06 ± 14.33 times faster than 'run_pathfinder.py'
 ```
