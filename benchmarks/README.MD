@@ -26,14 +26,45 @@ To use another model or choose a different output path, pass the model path and
 ```bash
 python export_model_to_onnx.py dqn_cnn_model.zip --output runtime/model.onnx
 ```
-## Run Pathfinder
+## Run Python Pathfinder
 
 From the repository root, run Pathfinder with the CSV grid and ONNX model in
 `benchmarks/runtime/`:
 
 ```bash
-/home/isidzukuri/second_ssd/python_stuff/rl/.venv/bin/python run_pathfinder.py
+run_pathfinder.py
 ```
 
 The script prints the number of actions taken and the grid with the traversed
 path highlighted.
+
+## Run Rust Pathfinder
+
+```
+./pathfinder
+```
+
+## Compare python and rust implementations
+
+Benchmarked on Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz.
+
+```
+sudo apt install hyperfine
+hyperfine --runs 100 \
+  "./pathfinder" \
+  "run_pathfinder.py"
+```
+results:
+```
+Benchmark 1: ./pathfinder
+  Time (mean ± σ):      30.3 ms ±   5.3 ms    [User: 29.9 ms, System: 6.6 ms]
+  Range (min … max):    26.1 ms …  59.4 ms    100 runs
+ 
+Benchmark 2: run_pathfinder.py
+  Time (mean ± σ):      2.305 s ±  0.166 s    [User: 2.256 s, System: 0.242 s]
+  Range (min … max):    2.113 s …  2.928 s    100 runs
+ 
+Summary
+  './pathfinder' ran
+   76.06 ± 14.33 times faster than 'run_pathfinder.py'
+```
