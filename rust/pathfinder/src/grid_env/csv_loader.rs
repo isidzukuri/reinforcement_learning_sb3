@@ -2,9 +2,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use crate::tensor::Tensor;
-
 use super::{CellType, GridEnv};
+use crate::tensor::Tensor;
 
 pub struct CsvLoader;
 

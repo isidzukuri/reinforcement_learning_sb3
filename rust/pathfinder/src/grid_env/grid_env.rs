@@ -1,6 +1,5 @@
-use crate::tensor::Tensor;
-
 use super::CellType;
+use crate::tensor::Tensor;
 
 #[derive(Debug)]
 pub struct GridEnv {

@@ -1,10 +1,8 @@
-// use crate::model_loader::call;
 use ort::session::Session as Model;
 use ort::value::Tensor as OrtTensor;
 
-use crate::tensor::Tensor;
-
 use crate::grid_env::{Action, CellType, GridEnv};
+use crate::tensor::Tensor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(usize)]
@@ -119,6 +117,9 @@ impl Agent {
         Ok(tensor)
     }
 
+    /// Chooses the next action by building the observation tensor for the agent's
+    /// current position, running the model inference, and returning the action with
+    /// the highest predicted value.
     pub fn select_action(
         &mut self,
         agent_pos: [usize; 2],
