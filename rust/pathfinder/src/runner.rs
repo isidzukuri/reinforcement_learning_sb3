@@ -93,6 +93,10 @@ impl Runner {
         ))
     }
 
+    pub fn path(&self) -> &[[usize; 2]] {
+        &self.path
+    }
+
     fn is_valid_position(grid_env: &GridEnv, position: [isize; 2]) -> bool {
         let [x, y] = position;
         x >= 0

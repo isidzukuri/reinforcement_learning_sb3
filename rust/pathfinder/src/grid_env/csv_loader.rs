@@ -10,8 +10,10 @@ pub struct CsvLoader;
 impl CsvLoader {
     pub fn call(path_to_file: &Path) -> Result<GridEnv, Box<dyn std::error::Error>> {
         let file = File::open(path_to_file)?;
-        let reader = BufReader::new(file);
+        Self::from_reader(BufReader::new(file))
+    }
 
+    pub fn from_reader(reader: impl BufRead) -> Result<GridEnv, Box<dyn std::error::Error>> {
         let mut rows = Vec::new();
         let mut start = [0, 0];
         let mut path_length = 0;
