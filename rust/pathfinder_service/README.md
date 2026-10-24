@@ -1,0 +1,47 @@
+# Pathfinder HTTP service
+
+Run the service from the repository root:
+
+```sh
+cargo run --manifest-path Cargo.toml
+```
+
+By default it listens on `0.0.0.0:3005` and loads the `model.onnx` file beside
+the service crate. Configure `PATHFINDER_ADDR` and `PATHFINDER_MODEL_PATH` to
+override those values.
+
+The build context must include both Rust crates because the service depends on
+the sibling `pathfinder` crate. From this `pathfinder_service` directory, build
+and run:
+
+```sh
+docker build -f Dockerfile -t rust-csv-agent ..
+docker run --rm -p 3005:3005 rust-csv-agent
+```
+
+The image includes the ONNX model and runs as a non-root user. Submit a CSV
+file to the container:
+
+```sh
+curl -X POST -F "file=@path/to/your/data.csv" http://localhost:3005/solve
+```
+
+Send a grid as a raw CSV body:
+
+```sh
+curl -X POST http://localhost:3005/solve \
+  -H 'Content-Type: text/csv' \
+  --data-binary $'# start: 0, 0\n0,1\n'
+```
+
+Alternatively, submit a multipart form with a `file` or `csv` field:
+
+```sh
+curl -X POST http://localhost:3005/solve \
+  -F 'file=@grid.csv;type=text/csv'
+```
+
+The response is JSON with `success`, `errors`, and `path` fields. Coordinates
+in `path` are `[x, y]` pairs. Each request loads its own ONNX inference session,
+so requests do not share mutable model session state. Request bodies are limited
+to 2 MiB.

@@ -2,3 +2,4 @@
 *.py[cod]
 .venv
 rust/pathfinder/target/*
+/rust/pathfinder_service/target/

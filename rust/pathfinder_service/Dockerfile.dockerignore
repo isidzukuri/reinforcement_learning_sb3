@@ -1,0 +1,7 @@
+.git
+**/target
+**/__pycache__
+**/*.py[cod]
+python/
+benchmarks/
+jupiter/
