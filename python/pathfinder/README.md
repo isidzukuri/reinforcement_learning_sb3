@@ -1,8 +1,5 @@
 # Pathfinder
 
-`pathfinder` loads a CSV grid, builds an `Agent` that matches the grid size and
-cell IDs, and loads an ONNX model for action selection.
-
 ```python
 from pathfinder import Pathfinder
 
