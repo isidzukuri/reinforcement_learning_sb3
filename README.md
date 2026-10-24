@@ -5,8 +5,9 @@ inference, and a Rust solver for grid-world pathfinding. The project is
 organized around a reusable grid environment, DQN training code, and a fast
 compiled solver that can be benchmarked against the Python version.
 
-## Overview
+![Rust pathfinder benchmark output](benchmarks/runtime/rust_pathfinder_output.jpg)
 
+## Overview
 The codebase includes:
 
 - Python packages for generating grid environments and running agents
