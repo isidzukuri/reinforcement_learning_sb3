@@ -1,17 +1,13 @@
 # Grid Env
 
 `grid-env` is a package for generating grid environments and
-importing or exporting them as CSV. PNG rendering is available with the
-optional `png` dependency.
+importing or exporting them as CSV.
 
 CSV exports include `GridEnv.start` and `GridEnv.path_length` as comment
 metadata before the grid rows. The importer restores these values and returns
 a `GridEnv`.
 
 ## Usage
-
-Install with the `png` extra to use `Png`; the CSV and stdout features require
-no runtime dependencies.
 
 ```python
 from grid_env import Exporter, GridEnv, Importer
