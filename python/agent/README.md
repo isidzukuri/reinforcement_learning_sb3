@@ -4,14 +4,6 @@
 environment and DQN inference with Stable-Baselines3. The package also includes
 a CNN feature extractor and a helper for creating a DQN model.
 
-## Install
-
-From this directory, install the package and its dependencies:
-
-```bash
-python -m pip install .
-```
-
 ## Agent API
 
 Create an agent with the environment's cell-type IDs and dimensions. Positions
@@ -37,7 +29,6 @@ action = agent.select_action([7, 7], ["up", "down", "left", "right"])
 
 `select_action` uses deterministic model predictions. The order of
 `action_list` must match the action indices used when training the model.
-Calling it before `load_model` raises `RuntimeError`.
 
 `update_memory` stores each observation in a six-channel `int32` map, in this
 order: finish locations, visited cells, confirmed walls, traversable cells,
