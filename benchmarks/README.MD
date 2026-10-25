@@ -59,7 +59,7 @@ prints the action count and the traversed path.
 From within `benchmarks/`:
 
 ```bash
-./pathfinder
+./pathfinder runtime/grid_output.csv runtime/model.onnx
 ```
 
 This binary is built for the benchmark environment and reads the same runtime
@@ -84,14 +84,14 @@ To reproduce the timing comparison with `hyperfine`:
 ```bash
 sudo apt install hyperfine
 hyperfine --runs 100 \
-  "./pathfinder" \
+  "./pathfinder runtime/grid_output.csv runtime/model.onnx" \
   "python run_pathfinder.py"
 ```
 
 Example result:
 
 ```text
-Benchmark 1: ./pathfinder
+Benchmark 1: ./pathfinder runtime/grid_output.csv runtime/model.onnx
   Time (mean ± σ):      30.3 ms ±   5.3 ms    [User: 29.9 ms, System: 6.6 ms]
   Range (min … max):    26.1 ms …  59.4 ms    100 runs
 
@@ -100,5 +100,5 @@ Benchmark 2: python run_pathfinder.py
   Range (min … max):    2.113 s …  2.928 s    100 runs
 
 Summary
-  './pathfinder' ran 76.06 ± 14.33 times faster than 'python run_pathfinder.py'
+  './pathfinder runtime/grid_output.csv runtime/model.onnx' ran 76.06 ± 14.33 times faster than 'python run_pathfinder.py'
 ```

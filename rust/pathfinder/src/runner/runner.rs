@@ -65,7 +65,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn test_runner(start: [usize; 2], cell: CellType) -> Runner {
-        let model_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("model.onnx");
+        let model_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
         let model = model_loader::call(model_path).expect("repository ONNX model should load");
         let mut grid_env = GridEnv::new(1, 1);
         grid_env.start = start;

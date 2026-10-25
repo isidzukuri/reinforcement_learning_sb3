@@ -1,14 +1,16 @@
 fn main() -> Result<(), pathfinder::runner::RunnerError> {
-    let executable_dir = std::env::current_exe()
-        .expect("failed to locate the running executable")
-        .parent()
-        .expect("running executable path has no parent directory")
-        .to_path_buf();
-    let runtime_dir = executable_dir.join("runtime");
-    let grid_file_path = runtime_dir.join("grid_output.csv");
-    let model_file_path = runtime_dir.join("model.onnx");
+    let args: Vec<_> = std::env::args_os().collect();
 
-    pathfinder::runner::call(grid_file_path, model_file_path)?;
+    if args.len() != 3 {
+        let program = args
+            .first()
+            .map(|arg| arg.to_string_lossy())
+            .unwrap_or_else(|| "pathfinder".into());
+
+        println!("Usage: {program} <grid_file_path> <model_file_path>");
+    } else {
+        pathfinder::runner::call(&args[1], &args[2])?;
+    }
 
     Ok(())
 }

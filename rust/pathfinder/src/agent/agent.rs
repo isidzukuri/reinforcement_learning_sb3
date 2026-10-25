@@ -205,7 +205,7 @@ mod tests {
     use std::path::Path;
 
     fn test_agent(window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Agent {
-        let model_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("model.onnx");
+        let model_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
         let model = call(model_path).expect("repository ONNX model should load");
         Agent::new(model, window_size, memory_grid_size)
     }
