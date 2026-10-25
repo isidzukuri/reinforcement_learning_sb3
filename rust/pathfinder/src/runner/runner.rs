@@ -1,48 +1,9 @@
-use std::fmt;
-use std::path::Path;
-
-use crate::agent::{Agent, AgentError};
-use crate::grid_env::{CellType, CsvLoader, CsvLoaderError, GridEnv, Printer};
-use crate::model_loader::{self, ModelLoaderError};
-
-pub fn call(
-    grid_file_path: impl AsRef<Path>,
-    model_file_path: impl AsRef<Path>,
-) -> Result<(), RunnerError> {
-    let grid_env = CsvLoader::call(grid_file_path.as_ref()).map_err(RunnerError::CsvLoader)?;
-    let model = model_loader::call(model_file_path).map_err(RunnerError::ModelLoader)?;
-    let agent = Agent::new(
-        model,
-        Runner::AGENT_WINDOW_SIZE,
-        [grid_env.width, grid_env.height],
-    );
-
-    let mut runner = Runner::new(grid_env, agent);
-
-    match runner.call() {
-        Ok(solution) => {
-            if solution.success {
-                println!("Path is found after {} iterations", solution.timesteps);
-                Printer::print(&runner.grid_env, Some(&solution.path));
-            } else {
-                println!("Agent did not reach the finish.");
-            }
-        }
-        Err(error) => return Err(error),
-    }
-
-    Ok(())
-}
-
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
-pub struct Solution {
-    pub success: bool,
-    pub timesteps: usize,
-    pub path: Vec<[usize; 2]>,
-}
+use super::{RunnerError, Solution};
+use crate::agent::Agent;
+use crate::grid_env::{CellType, GridEnv};
 
 pub struct Runner {
-    grid_env: GridEnv,
+    pub(super) grid_env: GridEnv,
     agent: Agent,
 }
 
@@ -97,49 +58,10 @@ impl Runner {
     }
 }
 
-#[derive(Debug)]
-pub enum RunnerError {
-    Agent(AgentError),
-    InvalidStartPosition,
-    CsvLoader(CsvLoaderError),
-    ModelLoader(ModelLoaderError),
-}
-
-// Implement std::fmt::Display
-impl fmt::Display for RunnerError {
-    fn fmt(&self, fm: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Agent(error) => write!(fm, "{error}"),
-            Self::InvalidStartPosition => {
-                fm.write_str("grid start position must be in bounds and not a wall")
-            }
-            Self::CsvLoader(error) => write!(fm, "{error}"),
-            Self::ModelLoader(error) => write!(fm, "{error}"),
-        }
-    }
-}
-
-// Implement std::error::Error (enables compatibility with `source()` and `dyn Error`)
-impl std::error::Error for RunnerError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Agent(error) => Some(error),
-            Self::InvalidStartPosition => None,
-            Self::CsvLoader(error) => Some(error),
-            Self::ModelLoader(error) => Some(error),
-        }
-    }
-}
-
-impl From<AgentError> for RunnerError {
-    fn from(error: AgentError) -> Self {
-        Self::Agent(error)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model_loader;
     use std::path::PathBuf;
 
     fn test_runner(start: [usize; 2], cell: CellType) -> Runner {
