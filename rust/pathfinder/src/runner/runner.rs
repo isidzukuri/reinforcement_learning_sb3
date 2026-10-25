@@ -3,13 +3,12 @@ use crate::agent::Agent;
 use crate::grid_env::{CellType, GridEnv};
 
 pub struct Runner {
-    pub(super) grid_env: GridEnv,
+    pub grid_env: GridEnv,
     agent: Agent,
 }
 
 impl Runner {
-    pub const AGENT_WINDOW_SIZE: [usize; 2] = [5, 5];
-    pub const ACTIONS_LIMIT: usize = 2000;
+    const ACTIONS_LIMIT: usize = 2000;
 
     pub fn new(grid_env: GridEnv, agent: Agent) -> Self {
         Self { grid_env, agent }
@@ -18,12 +17,7 @@ impl Runner {
     pub fn call(&mut self) -> Result<Solution, RunnerError> {
         let mut solution = Solution::default();
         let mut agent_pos = self.grid_env.start;
-        if !Self::is_valid_position(
-            &self.grid_env,
-            [agent_pos[0] as isize, agent_pos[1] as isize],
-        ) {
-            return Err(RunnerError::InvalidStartPosition);
-        }
+
         solution.path.push(agent_pos);
 
         for _ in 0..Self::ACTIONS_LIMIT {
@@ -38,7 +32,7 @@ impl Runner {
             let [dx, dy] = action.delta();
             let next_pos = [agent_pos[0] as isize + dx, agent_pos[1] as isize + dy];
 
-            if Self::is_valid_position(&self.grid_env, next_pos) {
+            if self.is_valid_position(next_pos) {
                 agent_pos = [next_pos[0] as usize, next_pos[1] as usize];
                 solution.path.push(agent_pos);
             }
@@ -48,13 +42,19 @@ impl Runner {
         Ok(solution)
     }
 
-    fn is_valid_position(grid_env: &GridEnv, position: [isize; 2]) -> bool {
+    fn is_valid_position(&self, position: [isize; 2]) -> bool {
         let [x, y] = position;
-        x >= 0
-            && x < grid_env.width as isize
-            && y >= 0
-            && y < grid_env.height as isize
-            && *grid_env.grid.get(0, y as usize, x as usize) != CellType::Wall
+
+        if x < 0 || y < 0 {
+            return false;
+        }
+
+        let x = x as usize;
+        let y = y as usize;
+
+        x < self.grid_env.width
+            && y < self.grid_env.height
+            && *self.grid_env.grid.get(0, y, x) != CellType::Wall
     }
 }
 
@@ -70,11 +70,7 @@ mod tests {
         let mut grid_env = GridEnv::new(1, 1);
         grid_env.start = start;
         grid_env.grid.set(0, 0, 0, cell);
-        let agent = Agent::new(
-            model,
-            Runner::AGENT_WINDOW_SIZE,
-            [grid_env.width, grid_env.height],
-        );
+        let agent = Agent::new(model, [5, 5], [grid_env.width, grid_env.height]);
 
         Runner::new(grid_env, agent)
     }
@@ -91,26 +87,6 @@ mod tests {
                 path: vec![[0, 0]],
             }
         );
-    }
-
-    #[test]
-    fn call_returns_error_when_start_is_out_of_bounds() {
-        let mut runner = test_runner([1, 0], CellType::Finish);
-
-        assert!(matches!(
-            runner.call(),
-            Err(RunnerError::InvalidStartPosition)
-        ));
-    }
-
-    #[test]
-    fn call_returns_error_when_start_is_a_wall() {
-        let mut runner = test_runner([0, 0], CellType::Wall);
-
-        assert!(matches!(
-            runner.call(),
-            Err(RunnerError::InvalidStartPosition)
-        ));
     }
 
     #[test]

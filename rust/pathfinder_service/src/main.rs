@@ -8,7 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use pathfinder::{agent::Agent, grid_env::CsvLoader, model_loader, runner::Runner};
+use pathfinder::{agent::Agent, grid_env::CsvLoader, model_loader, runner::Runner, runner::AGENT_WINDOW_SIZE};
 use serde::Serialize;
 
 const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
@@ -133,7 +133,7 @@ fn solve_grid(state: &AppState, csv: &str) -> Result<SolveResponse, String> {
     // Each solve owns its ONNX session; concurrent requests do not share mutable session state.
     let model = model_loader::call(&state.model_path)
         .map_err(|error| format!("failed to load ONNX model: {error}"))?;
-    let agent = Agent::new(model, Runner::AGENT_WINDOW_SIZE, [grid.width, grid.height]);
+    let agent = Agent::new(model, AGENT_WINDOW_SIZE, [grid.width, grid.height]);
     let mut runner = Runner::new(grid, agent);
 
     match runner.call() {

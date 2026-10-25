@@ -12,17 +12,15 @@ use crate::model_loader;
 
 use std::path::Path;
 
+pub const AGENT_WINDOW_SIZE: [usize; 2] = [5, 5];
+
 pub fn call(
     grid_file_path: impl AsRef<Path>,
     model_file_path: impl AsRef<Path>,
 ) -> Result<(), RunnerError> {
     let grid_env = CsvLoader::call(grid_file_path.as_ref()).map_err(RunnerError::CsvLoader)?;
     let model = model_loader::call(model_file_path).map_err(RunnerError::ModelLoader)?;
-    let agent = Agent::new(
-        model,
-        Runner::AGENT_WINDOW_SIZE,
-        [grid_env.width, grid_env.height],
-    );
+    let agent = Agent::new(model, AGENT_WINDOW_SIZE, [grid_env.width, grid_env.height]);
 
     let mut runner = Runner::new(grid_env, agent);
     let solution = runner.call()?;
