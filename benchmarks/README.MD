@@ -79,6 +79,11 @@ The Python and Rust outputs are shown below:
 | --- | --- |
 | ![Python Pathfinder output](runtime/python_pathfinder_output.jpg) | ![Rust Pathfinder output](runtime/rust_pathfinder_output.jpg) |
 
+
+Both implementations followed the same path:
+
+![path](runtime/grid_output_path.png)
+
 To reproduce the timing comparison with `hyperfine`:
 
 ```bash
