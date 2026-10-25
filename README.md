@@ -9,12 +9,12 @@ compiled solver that can be benchmarked against the Python version.
 
 ## Overview
 
-- [`jupiter/`](./jupiter/) — notebooks used for experimentation and model analysis. Read for detailed description of project.
-- [`python/`](./python/) — packages used for model training
-- [`python/pathfinder/`](./python/pathfinder/) — helper that loads a grid and runs an ONNX-backed agent
-- [`rust/pathfinder/`](./rust/pathfinder/) — Rust implementation of the grid environment and solver
-- [`rust/pathfinder_service/`](./rust/pathfinder_service/) — HTTP API that accepts grid input and returns a path
-- [`benchmarks/`](./benchmarks/) — sample data, generated artifacts, and Python/Rust comparison scripts
+- [`jupiter/`](./jupiter/) - notebooks used for experimentation and model analysis. Read for detailed description of project.
+- [`python/`](./python/) - packages used for model training
+- [`python/pathfinder/`](./python/pathfinder/) - helper that loads a grid and runs an ONNX-backed agent
+- [`rust/pathfinder/`](./rust/pathfinder/) - Rust implementation of the grid environment and solver
+- [`rust/pathfinder_service/`](./rust/pathfinder_service/) - HTTP API that accepts grid input and returns a path
+- [`benchmarks/`](./benchmarks/) - sample data, generated artifacts, and Python/Rust comparison scripts
 
 ## Prerequisites
 
