@@ -1,10 +1,38 @@
-use std::error::Error;
+use std::fmt;
 use std::path::Path;
 
 use ort::session::Session;
 
-pub fn call(file_path: impl AsRef<Path>) -> Result<Session, Box<dyn Error>> {
-    Ok(Session::builder()?.commit_from_file(file_path.as_ref())?)
+#[derive(Debug)]
+pub enum ModelLoaderError {
+    SessionBuilder(ort::Error),
+    LoadModel(ort::Error),
+}
+
+impl fmt::Display for ModelLoaderError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SessionBuilder(error) => {
+                write!(f, "failed to create ONNX session builder: {error}")
+            }
+            Self::LoadModel(error) => write!(f, "failed to load ONNX model: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for ModelLoaderError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::SessionBuilder(error) | Self::LoadModel(error) => Some(error),
+        }
+    }
+}
+
+pub fn call(file_path: impl AsRef<Path>) -> Result<Session, ModelLoaderError> {
+    let builder = Session::builder().map_err(ModelLoaderError::SessionBuilder)?;
+    builder
+        .commit_from_file(file_path.as_ref())
+        .map_err(ModelLoaderError::LoadModel)
 }
 
 #[cfg(test)]
@@ -28,7 +56,10 @@ mod tests {
 
         let result = call(&path);
 
-        assert!(result.is_err(), "expected a missing ONNX model to fail");
+        assert!(
+            matches!(result, Err(ModelLoaderError::LoadModel(_))),
+            "expected a missing ONNX model to fail while loading"
+        );
     }
 
     #[test]
@@ -38,7 +69,10 @@ mod tests {
 
         let result = call(&path);
 
-        assert!(result.is_err(), "expected an invalid ONNX payload to fail");
+        assert!(
+            matches!(result, Err(ModelLoaderError::LoadModel(_))),
+            "expected an invalid ONNX payload to fail while loading"
+        );
         fs::remove_file(&path).ok();
     }
 }

@@ -6,7 +6,7 @@ mod printer;
 
 pub use action::Action;
 pub use cell_type::CellType;
-pub use csv_loader::CsvLoader;
+pub use csv_loader::{CsvLoader, CsvLoaderError};
 pub use grid_env::GridEnv;
 pub use printer::Printer;
 
@@ -148,11 +148,17 @@ mod tests {
     fn csv_loader_rejects_empty_or_invalid_files() {
         let empty_path = unique_temp_file("empty_grid");
         fs::write(&empty_path, "").unwrap();
-        assert!(CsvLoader::call(empty_path.as_path()).is_err());
+        assert!(matches!(
+            CsvLoader::call(empty_path.as_path()),
+            Err(CsvLoaderError::EmptyOrInvalidGrid)
+        ));
 
         let invalid_metadata = unique_temp_file("invalid_grid");
         fs::write(&invalid_metadata, "# start: invalid\n").unwrap();
-        assert!(CsvLoader::call(invalid_metadata.as_path()).is_err());
+        assert!(matches!(
+            CsvLoader::call(invalid_metadata.as_path()),
+            Err(CsvLoaderError::InvalidStartMetadata)
+        ));
 
         fs::remove_file(&empty_path).ok();
         fs::remove_file(&invalid_metadata).ok();
@@ -163,9 +169,22 @@ mod tests {
         let csv_path = unique_temp_file("ragged_grid");
         fs::write(&csv_path, "0,1\n2\n").unwrap();
 
-        assert!(CsvLoader::call(csv_path.as_path()).is_err());
+        assert!(matches!(
+            CsvLoader::call(csv_path.as_path()),
+            Err(CsvLoaderError::InconsistentRowWidths)
+        ));
 
         fs::remove_file(&csv_path).unwrap();
+    }
+
+    #[test]
+    fn csv_loader_reports_invalid_cell_types() {
+        let result = CsvLoader::from_reader(std::io::Cursor::new("0,invalid\n"));
+
+        assert!(matches!(
+            result,
+            Err(CsvLoaderError::InvalidCellType(value)) if value == "invalid"
+        ));
     }
 
     #[test]

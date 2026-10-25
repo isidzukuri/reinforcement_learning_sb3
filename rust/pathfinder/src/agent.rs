@@ -1,5 +1,6 @@
 use ort::session::Session as Model;
 use ort::value::Tensor as OrtTensor;
+use std::fmt;
 
 use crate::grid_env::{Action, CellType, GridEnv};
 use crate::tensor::Tensor;
@@ -36,6 +37,48 @@ pub struct Agent {
     known_env_map: Tensor<f32>,
 }
 
+#[derive(Debug)]
+pub enum AgentError {
+    ObservationTensor(ort::Error),
+    Inference(ort::Error),
+    OutputTensor(ort::Error),
+    MissingModelOutput,
+    NoValidActionValues,
+    InvalidActionIndex(usize),
+}
+
+impl fmt::Display for AgentError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ObservationTensor(error) => {
+                write!(f, "failed to create observation tensor: {error}")
+            }
+            Self::Inference(error) => write!(f, "model inference failed: {error}"),
+            Self::OutputTensor(error) => write!(f, "failed to read model output: {error}"),
+            Self::MissingModelOutput => f.write_str("model returned no outputs"),
+            Self::NoValidActionValues => {
+                f.write_str("model output tensor contains no valid action values")
+            }
+            Self::InvalidActionIndex(index) => {
+                write!(f, "model output action index {index} is out of bounds")
+            }
+        }
+    }
+}
+
+impl std::error::Error for AgentError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::ObservationTensor(error) | Self::Inference(error) | Self::OutputTensor(error) => {
+                Some(error)
+            }
+            Self::MissingModelOutput | Self::NoValidActionValues | Self::InvalidActionIndex(_) => {
+                None
+            }
+        }
+    }
+}
+
 impl Agent {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
         let known_env_map =
@@ -57,7 +100,7 @@ impl Agent {
     pub fn get_observation_tensor(
         &self,
         agent_pos: [usize; 2],
-    ) -> Result<OrtTensor<f32>, ort::Error> {
+    ) -> Result<OrtTensor<f32>, AgentError> {
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
@@ -112,7 +155,8 @@ impl Agent {
         }
 
         let shape = [1, num_channels, window_height, window_width];
-        let tensor = OrtTensor::from_array((shape, tensor_data.into_vec()))?;
+        let tensor = OrtTensor::from_array((shape, tensor_data.into_vec()))
+            .map_err(AgentError::ObservationTensor)?;
 
         Ok(tensor)
     }
@@ -120,38 +164,43 @@ impl Agent {
     /// Chooses the next action by building the observation tensor for the agent's
     /// current position, running the model inference, and returning the action with
     /// the highest predicted value.
-    pub fn select_action(
-        &mut self,
-        agent_pos: [usize; 2],
-    ) -> Result<Action, Box<dyn std::error::Error>> {
+    pub fn select_action(&mut self, agent_pos: [usize; 2]) -> Result<Action, AgentError> {
         let obs_tensor = self.get_observation_tensor(agent_pos)?;
-        let outputs = self.model.run(ort::inputs![obs_tensor])?;
+        let outputs = self
+            .model
+            .run(ort::inputs![obs_tensor])
+            .map_err(AgentError::Inference)?;
 
-        let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = outputs
+            .values()
+            .next()
+            .ok_or(AgentError::MissingModelOutput)?;
+        let (_shape, data) = output
+            .try_extract_tensor::<f32>()
+            .map_err(AgentError::OutputTensor)?;
 
-        // Find the index of the maximum non-NaN value (Argmax)
+        Self::action_from_output(data)
+    }
+
+    fn action_from_output(data: &[f32]) -> Result<Action, AgentError> {
         let action_index = data
             .iter()
             .enumerate()
             .filter(|&(_, &v)| !v.is_nan())
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(idx, _)| idx)
-            .expect("Model output tensor contains no valid action values");
+            .ok_or(AgentError::NoValidActionValues)?;
 
         let action = Action::ALL
             .get(action_index)
             .copied()
-            .expect("Model output action index out of bounds");
+            .ok_or(AgentError::InvalidActionIndex(action_index))?;
 
         Ok(action)
     }
 
     /// Updates the global memory map directly from the GridEnv.
-    pub fn update_memory(
-        &mut self,
-        agent_pos: [usize; 2],
-        grid_env: &GridEnv,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn update_memory(&mut self, agent_pos: [usize; 2], grid_env: &GridEnv) {
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
@@ -213,8 +262,6 @@ impl Agent {
                     .set(TensorLayer::Revealed as usize, gy, gx, 1.0);
             },
         );
-
-        Ok(())
     }
 }
 
@@ -299,7 +346,7 @@ mod tests {
         let mut agent = test_agent([3, 3], [5, 5]);
         let grid = test_grid();
 
-        agent.update_memory([2, 2], &grid).unwrap();
+        agent.update_memory([2, 2], &grid);
 
         let known_map = &agent.known_env_map;
         assert_eq!(known_map.get(TensorLayer::Finish as usize, 1, 2), &1.0);
@@ -322,7 +369,7 @@ mod tests {
         grid.grid.set(0, 1, 0, CellType::Wall);
         grid.grid.set(0, 1, 1, CellType::Finish);
 
-        agent.update_memory([0, 0], &grid).unwrap();
+        agent.update_memory([0, 0], &grid);
 
         let known_map = &agent.known_env_map;
         assert_eq!(known_map.get(TensorLayer::Visited as usize, 0, 0), &1.0);
@@ -337,12 +384,12 @@ mod tests {
     fn update_memory_preserves_consumed_bonus() {
         let mut agent = test_agent([3, 3], [5, 5]);
         let grid = test_grid();
-        agent.update_memory([2, 2], &grid).unwrap();
+        agent.update_memory([2, 2], &grid);
         agent
             .known_env_map
             .set(TensorLayer::Bonus as usize, 2, 2, -1.0);
 
-        agent.update_memory([2, 2], &grid).unwrap();
+        agent.update_memory([2, 2], &grid);
 
         assert_eq!(
             agent.known_env_map.get(TensorLayer::Bonus as usize, 2, 2),
@@ -387,5 +434,28 @@ mod tests {
                 .all(|&value| value == 0.0)
         );
     }
-}
 
+    #[test]
+    fn action_from_output_returns_error_when_values_are_empty_or_nan() {
+        assert!(matches!(
+            Agent::action_from_output(&[]),
+            Err(AgentError::NoValidActionValues)
+        ));
+        assert!(matches!(
+            Agent::action_from_output(&[f32::NAN, f32::NAN]),
+            Err(AgentError::NoValidActionValues)
+        ));
+    }
+
+    #[test]
+    fn action_from_output_returns_error_when_index_is_out_of_bounds() {
+        let output = vec![0.0; Action::ALL.len() + 1];
+        let mut output = output;
+        *output.last_mut().unwrap() = 1.0;
+
+        assert!(matches!(
+            Agent::action_from_output(&output),
+            Err(AgentError::InvalidActionIndex(index)) if index == Action::ALL.len()
+        ));
+    }
+}

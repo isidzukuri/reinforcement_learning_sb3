@@ -137,15 +137,15 @@ fn solve_grid(state: &AppState, csv: &str) -> Result<SolveResponse, String> {
     let mut runner = Runner::new(grid, agent);
 
     match runner.call() {
-        Ok(success) => Ok(SolveResponse {
-            success,
+        Ok(solution) => Ok(SolveResponse {
+            success: solution.success,
             errors: Vec::new(),
-            path: runner.path().to_vec(),
+            path: solution.path,
         }),
         Err(error) => Ok(SolveResponse {
             success: false,
-            errors: vec![error],
-            path: runner.path().to_vec(),
+            errors: vec![error.to_string()],
+            path: Vec::new(),
         }),
     }
 }
