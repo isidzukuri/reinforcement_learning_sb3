@@ -128,7 +128,7 @@ async fn read_csv(request: Request) -> Result<String, String> {
 }
 
 fn solve_grid(state: &AppState, csv: &str) -> Result<SolveResponse, String> {
-    let grid = CsvLoader::from_reader(std::io::Cursor::new(csv.as_bytes()))
+    let grid = CsvLoader::load_from(std::io::Cursor::new(csv.as_bytes()))
         .map_err(|error| format!("invalid CSV grid: {error}"))?;
     // Each solve owns its ONNX session; concurrent requests do not share mutable session state.
     let model = model_loader::call(&state.model_path)
