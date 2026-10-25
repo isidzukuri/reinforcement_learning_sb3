@@ -1,82 +1,15 @@
 use ort::session::Session as Model;
 use ort::value::Tensor as OrtTensor;
-use std::fmt;
 
+use super::{AgentError, TensorLayer};
 use crate::grid_env::{Action, CellType, GridEnv};
 use crate::tensor::Tensor;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(usize)]
-pub enum TensorLayer {
-    Finish = 0,      // Finish Line (Detected finish coordinates)
-    Visited = 1,     // Visited Memory (Historical trail of agent positions)
-    Wall = 2,        // Confirmed Walls (Detected obstacle locations)
-    Traversable = 3, // Confirmed Open Space (Verified safe floor/empty tiles)
-    Bonus = 4,       // Confirmed Bonus (Active, uncollected bonus tiles)
-    Revealed = 5,    // Explored Space (1 = revealed/explored, 0 = unexplored / fog of war)
-}
-
-impl TensorLayer {
-    pub const fn len() -> usize {
-        Self::ALL.len()
-    }
-    pub const ALL: [TensorLayer; 6] = [
-        Self::Finish,
-        Self::Visited,
-        Self::Wall,
-        Self::Traversable,
-        Self::Bonus,
-        Self::Revealed,
-    ];
-}
 
 pub struct Agent {
     model: Model,
     window_size: [usize; 2],
     memory_grid_size: [usize; 2],
     known_env_map: Tensor<f32>,
-}
-
-#[derive(Debug)]
-pub enum AgentError {
-    ObservationTensor(ort::Error),
-    Inference(ort::Error),
-    OutputTensor(ort::Error),
-    MissingModelOutput,
-    NoValidActionValues,
-    InvalidActionIndex(usize),
-}
-
-impl fmt::Display for AgentError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ObservationTensor(error) => {
-                write!(f, "failed to create observation tensor: {error}")
-            }
-            Self::Inference(error) => write!(f, "model inference failed: {error}"),
-            Self::OutputTensor(error) => write!(f, "failed to read model output: {error}"),
-            Self::MissingModelOutput => f.write_str("model returned no outputs"),
-            Self::NoValidActionValues => {
-                f.write_str("model output tensor contains no valid action values")
-            }
-            Self::InvalidActionIndex(index) => {
-                write!(f, "model output action index {index} is out of bounds")
-            }
-        }
-    }
-}
-
-impl std::error::Error for AgentError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::ObservationTensor(error) | Self::Inference(error) | Self::OutputTensor(error) => {
-                Some(error)
-            }
-            Self::MissingModelOutput | Self::NoValidActionValues | Self::InvalidActionIndex(_) => {
-                None
-            }
-        }
-    }
 }
 
 impl Agent {
@@ -272,8 +205,7 @@ mod tests {
     use std::path::Path;
 
     fn test_agent(window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Agent {
-        let model_path =
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../benchmarks/runtime/model.onnx");
+        let model_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("model.onnx");
         let model = call(model_path).expect("repository ONNX model should load");
         Agent::new(model, window_size, memory_grid_size)
     }
