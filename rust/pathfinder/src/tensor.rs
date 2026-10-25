@@ -7,7 +7,7 @@ pub struct Tensor<T> {
 }
 
 impl<T: Default + Clone> Tensor<T> {
-    /// Creates a new 3D Tensor initialized with default values for type T.
+    /// Creates a new Tensor initialized with default values for type T.
     pub fn new(channels: usize, height: usize, width: usize) -> Self {
         Self {
             channels,
@@ -79,7 +79,8 @@ impl<T> Tensor<T> {
     pub fn into_vec(self) -> Vec<T> {
         self.data
     }
-
+    
+    /// Returns a mutable slice for a specific channel's contiguous data block.
     #[inline]
     pub fn channel_mut(&mut self, channel: usize) -> &mut [T] {
         let channel_size = self.height * self.width;
