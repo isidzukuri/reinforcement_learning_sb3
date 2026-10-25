@@ -41,6 +41,7 @@ and the benchmark scripts in [`benchmarks/`](./benchmarks/).
 The Python side is split into libraries:
 
 - `grid-env` creates grid maps, renders them, and exports/imports CSV files
+- `gym-grid-env` environment adapter for gymnasium
 - `grid-agent` manages memory maps and DQN model inference
 - `pathfinder` loads CSV grids and uses an ONNX model to solve them
 
