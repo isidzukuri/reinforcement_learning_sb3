@@ -50,15 +50,10 @@ The Rust implementation lives in [`rust/pathfinder/`](./rust/pathfinder/) and ca
 
 ```bash
 cd rust/pathfinder
-cargo run
+cargo build --release
 ```
 
-The service crate in [`rust/pathfinder_service/`](./rust/pathfinder_service/) exposes a small HTTP API for solving grids from CSV input:
-
-```bash
-cd rust/pathfinder_service
-cargo run
-```
+The service crate in [`rust/pathfinder_service/`](./rust/pathfinder_service/) exposes a small HTTP API for solving grids from CSV input.
 
 By default the service listens on `0.0.0.0:3005` and loads `model.onnx` from
 its local directory. For more details, see [`rust/pathfinder_service/README.md`](./rust/pathfinder_service/README.md).
