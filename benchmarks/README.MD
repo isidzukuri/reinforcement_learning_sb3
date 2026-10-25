@@ -69,10 +69,9 @@ files that the Python pathfinder uses.
 
 Benchmarked on Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz.
 
-Both implementations run on the same generated 15x15 grid:
+Both implementations run on the same generated 15x15 grid(Legend: 1 - finish, 2 - bonus, 3 - wall):
 
 ![Generated 15x15 benchmark grid](runtime/grid_output.png)
-Legend: 1 - finish, 2 - bonus, 3 - wall
 
 The Python and Rust outputs are shown below:
 
