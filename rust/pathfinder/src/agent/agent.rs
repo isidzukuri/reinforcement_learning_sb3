@@ -45,7 +45,7 @@ impl Agent {
         let memory_width = self.memory_grid_size[0] as isize;
         let memory_height = self.memory_grid_size[1] as isize;
 
-        let num_channels = TensorLayer::ALL.len();
+        let num_channels = self.known_env_map.channels();
         let mut tensor_data = Tensor::new(num_channels, window_height, window_width);
         tensor_data.fill_channel(TensorLayer::Wall as usize, 1.0);
 
