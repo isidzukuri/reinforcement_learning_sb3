@@ -34,25 +34,31 @@ impl<T> Tensor<T> {
         }
     }
 
+    /// Computes the flat buffer index for a given (channel, row, column).
+    #[inline]
+    fn index(&self, channel: usize, row: usize, column: usize) -> usize {
+        channel * (self.height * self.width) + row * self.width + column
+    }
+
     /// Gets an immutable reference to a cell at (channel, row, column).
     #[inline]
     pub fn get(&self, channel: usize, row: usize, column: usize) -> &T {
-        let index = channel * (self.height * self.width) + row * self.width + column;
-        &self.data[index]
+        let idx = self.index(channel, row, column);
+        &self.data[idx]
     }
 
     /// Gets a mutable reference to a cell at (channel, row, column).
     #[inline]
     pub fn get_mut(&mut self, channel: usize, row: usize, column: usize) -> &mut T {
-        let index = channel * (self.height * self.width) + row * self.width + column;
-        &mut self.data[index]
+        let idx = self.index(channel, row, column);
+        &mut self.data[idx]
     }
 
     /// Sets the value of a cell at (channel, row, column).
     #[inline]
     pub fn set(&mut self, channel: usize, row: usize, column: usize, value: T) {
-        let index = channel * (self.height * self.width) + row * self.width + column;
-        self.data[index] = value;
+        let idx = self.index(channel, row, column);
+        self.data[idx] = value;
     }
 
     /// Returns the number of channels.
