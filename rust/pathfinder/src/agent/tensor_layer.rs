@@ -1,5 +1,4 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(usize)]
 pub enum TensorLayer {
     Finish = 0,      // Finish Line (Detected finish coordinates)
     Visited = 1,     // Visited Memory (Historical trail of agent positions)
