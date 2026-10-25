@@ -41,3 +41,45 @@ impl std::error::Error for AgentError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::error::Error as _;
+
+    #[test]
+    fn tensor_errors_report_display_and_source() {
+        let error = AgentError::ObservationTensor(ort::Error::new("obs tensor issue"));
+        assert_eq!(
+            error.to_string(),
+            "failed to create observation tensor: obs tensor issue"
+        );
+        assert!(error.source().is_some());
+
+        let error = AgentError::Inference(ort::Error::new("inference issue"));
+        assert_eq!(error.to_string(), "model inference failed: inference issue");
+        assert!(error.source().is_some());
+
+        let error = AgentError::OutputTensor(ort::Error::new("output tensor issue"));
+        assert_eq!(error.to_string(), "failed to read model output: output tensor issue");
+        assert!(error.source().is_some());
+    }
+
+    #[test]
+    fn non_tensor_errors_have_expected_messages_and_no_source() {
+        let error = AgentError::MissingModelOutput;
+        assert_eq!(error.to_string(), "model returned no outputs");
+        assert!(error.source().is_none());
+
+        let error = AgentError::NoValidActionValues;
+        assert_eq!(
+            error.to_string(),
+            "model output tensor contains no valid action values"
+        );
+        assert!(error.source().is_none());
+
+        let error = AgentError::InvalidActionIndex(7);
+        assert_eq!(error.to_string(), "model output action index 7 is out of bounds");
+        assert!(error.source().is_none());
+    }
+}

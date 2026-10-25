@@ -24,3 +24,23 @@ impl std::error::Error for ModelLoaderError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::error::Error as _;
+
+    #[test]
+    fn model_loader_errors_report_display_and_source() {
+        let error = ModelLoaderError::SessionBuilder(ort::Error::new("session builder failed"));
+        assert_eq!(
+            error.to_string(),
+            "failed to create ONNX session builder: session builder failed"
+        );
+        assert!(error.source().is_some());
+
+        let error = ModelLoaderError::LoadModel(ort::Error::new("load model failed"));
+        assert_eq!(error.to_string(), "failed to load ONNX model: load model failed");
+        assert!(error.source().is_some());
+    }
+}
