@@ -18,12 +18,12 @@ The codebase includes:
 
 ## Repository layout
 
-- `jupiter/` — notebooks used for experimentation and model analysis. Read for detailed description of project.
-- `python/` — packages used for model training
-- `python/pathfinder/` — helper that loads a grid and runs an ONNX-backed agent
-- `rust/pathfinder/` — Rust implementation of the grid environment and solver
-- `rust/pathfinder_service/` — HTTP API that accepts grid input and returns a path
-- `benchmarks/` — sample data, generated artifacts, and Python/Rust comparison scripts
+- [`jupiter/`](./jupiter/) — notebooks used for experimentation and model analysis. Read for detailed description of project.
+- [`python/`](./python/) — packages used for model training
+- [`python/pathfinder/`](./python/pathfinder/) — helper that loads a grid and runs an ONNX-backed agent
+- [`rust/pathfinder/`](./rust/pathfinder/) — Rust implementation of the grid environment and solver
+- [`rust/pathfinder_service/`](./rust/pathfinder_service/) — HTTP API that accepts grid input and returns a path
+- [`benchmarks/`](./benchmarks/) — sample data, generated artifacts, and Python/Rust comparison scripts
 
 ## Prerequisites
 
@@ -33,8 +33,8 @@ The codebase includes:
 
 ## Quick start
 
-For a complete end-to-end flow, see the package READMEs under `python/` and the
-benchmark scripts in `benchmarks/`.
+For a complete end-to-end flow, see the package READMEs under [`python/`](./python/)
+and the benchmark scripts in [`benchmarks/`](./benchmarks/).
 
 ## Python packages
 
@@ -46,14 +46,14 @@ The Python side is split into libraries:
 
 ## Rust pathfinder and service
 
-The Rust implementation lives in `rust/pathfinder/` and can be built directly:
+The Rust implementation lives in [`rust/pathfinder/`](./rust/pathfinder/) and can be built directly:
 
 ```bash
 cd rust/pathfinder
 cargo run
 ```
 
-The service crate exposes a small HTTP API for solving grids from CSV input:
+The service crate in [`rust/pathfinder_service/`](./rust/pathfinder_service/) exposes a small HTTP API for solving grids from CSV input:
 
 ```bash
 cd rust/pathfinder_service
@@ -61,11 +61,11 @@ cargo run
 ```
 
 By default the service listens on `0.0.0.0:3005` and loads `model.onnx` from
-its local directory. For more details, see `rust/pathfinder_service/README.md`.
+its local directory. For more details, see [`rust/pathfinder_service/README.md`](./rust/pathfinder_service/README.md).
 
 ## Research and notebooks
 
-The `jupiter/` directory contains notebooks used for experimentation, iteration,
+The [`jupiter/`](./jupiter/) directory contains notebooks used for experimentation, iteration,
 and model analysis. These notebooks complement the packaged code and are a
 useful place to inspect training logic and result generation.
 
