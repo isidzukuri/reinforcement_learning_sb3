@@ -8,22 +8,13 @@ compiled solver that can be benchmarked against the Python version.
 <img src="benchmarks/runtime/rust_pathfinder_output.jpg" width="300" alt="Rust pathfinder benchmark output">
 
 ## Overview
-The codebase includes:
 
-- Python packages for generating grid environments and running agents
-- DQN model creation, training, and export to ONNX
-- A pathfinding wrapper that runs an agent
-- A Rust implementation of the solver and a small HTTP service
-- Benchmark scripts and notebooks for experimentation and comparison
-
-## Repository layout
-
-- [`jupiter/`](./jupiter/) — notebooks used for experimentation and model analysis. Read for detailed description of project.
-- [`python/`](./python/) — packages used for model training
-- [`python/pathfinder/`](./python/pathfinder/) — helper that loads a grid and runs an ONNX-backed agent
-- [`rust/pathfinder/`](./rust/pathfinder/) — Rust implementation of the grid environment and solver
-- [`rust/pathfinder_service/`](./rust/pathfinder_service/) — HTTP API that accepts grid input and returns a path
-- [`benchmarks/`](./benchmarks/) — sample data, generated artifacts, and Python/Rust comparison scripts
+- [`jupiter/`](./jupiter/) - notebooks used for experimentation and model analysis. Read for detailed description of project.
+- [`python/`](./python/) - packages used for model training
+- [`python/pathfinder/`](./python/pathfinder/) - helper that loads a grid and runs an ONNX-backed agent
+- [`rust/pathfinder/`](./rust/pathfinder/) - Rust implementation of the grid environment and solver
+- [`rust/pathfinder_service/`](./rust/pathfinder_service/) - HTTP API that accepts grid input and returns a path
+- [`benchmarks/`](./benchmarks/) - sample data, generated artifacts, and Python/Rust comparison scripts
 
 ## Prerequisites
 
@@ -41,6 +32,7 @@ and the benchmark scripts in [`benchmarks/`](./benchmarks/).
 The Python side is split into libraries:
 
 - `grid-env` creates grid maps, renders them, and exports/imports CSV files
+- `gym-grid-env` environment adapter for gymnasium
 - `grid-agent` manages memory maps and DQN model inference
 - `pathfinder` loads CSV grids and uses an ONNX model to solve them
 
@@ -50,15 +42,10 @@ The Rust implementation lives in [`rust/pathfinder/`](./rust/pathfinder/) and ca
 
 ```bash
 cd rust/pathfinder
-cargo run
+cargo build --release
 ```
 
-The service crate in [`rust/pathfinder_service/`](./rust/pathfinder_service/) exposes a small HTTP API for solving grids from CSV input:
-
-```bash
-cd rust/pathfinder_service
-cargo run
-```
+The service crate in [`rust/pathfinder_service/`](./rust/pathfinder_service/) exposes a small HTTP API for solving grids from CSV input.
 
 By default the service listens on `0.0.0.0:3005` and loads `model.onnx` from
 its local directory. For more details, see [`rust/pathfinder_service/README.md`](./rust/pathfinder_service/README.md).
@@ -72,3 +59,5 @@ useful place to inspect training logic and result generation.
 ## Notes
 
 Its just Proof Of Concept!
+
+...perhaps i should have used Git submodules
