@@ -32,7 +32,7 @@ impl Runner {
             let [dx, dy] = action.delta();
             let next_pos = [agent_pos[0] as isize + dx, agent_pos[1] as isize + dy];
 
-            if self.is_valid_position(next_pos) {
+            if self.grid_env.is_valid_position(next_pos) {
                 agent_pos = [next_pos[0] as usize, next_pos[1] as usize];
                 solution.path.push(agent_pos);
             }
@@ -40,21 +40,6 @@ impl Runner {
 
         solution.success = false;
         Ok(solution)
-    }
-
-    fn is_valid_position(&self, position: [isize; 2]) -> bool {
-        let [x, y] = position;
-
-        if x < 0 || y < 0 {
-            return false;
-        }
-
-        let x = x as usize;
-        let y = y as usize;
-
-        x < self.grid_env.width
-            && y < self.grid_env.height
-            && !self.grid_env.is_cell([x, y], CellType::Wall)
     }
 }
 
@@ -114,27 +99,5 @@ mod tests {
                 path: vec![[0, 0]],
             }
         );
-    }
-
-    #[test]
-    fn is_valid_position_rejects_negative_coordinates_and_grid_boundaries() {
-        let runner = test_runner([0, 0], CellType::Empty);
-
-        assert!(!runner.is_valid_position([-1, 0]));
-        assert!(!runner.is_valid_position([0, -1]));
-        assert!(!runner.is_valid_position([runner.grid_env.width as isize, 0]));
-        assert!(!runner.is_valid_position([0, runner.grid_env.height as isize]));
-    }
-
-    #[test]
-    fn is_valid_position_rejects_walls_and_accepts_traversable_cells() {
-        let mut runner = test_runner([0, 0], CellType::Empty);
-        runner.grid_env.width = 2;
-        runner.grid_env.height = 1;
-        runner.grid_env.grid =
-            crate::tensor::Tensor::from_vec(1, 1, 2, vec![CellType::Empty, CellType::Wall]);
-
-        assert!(runner.is_valid_position([0, 0]));
-        assert!(!runner.is_valid_position([1, 0]));
     }
 }

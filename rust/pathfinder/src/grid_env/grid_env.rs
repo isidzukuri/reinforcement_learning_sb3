@@ -27,6 +27,21 @@ impl GridEnv {
         *self.grid.get(Self::TENSOR_LAYER, coords[1], coords[0]) == cell_type
     }
 
+    pub fn is_valid_position(&self, position: [isize; 2]) -> bool {
+        let [x, y] = position;
+
+        if x < 0 || y < 0 {
+            return false;
+        }
+
+        let x = x as usize;
+        let y = y as usize;
+
+        x < self.width
+            && y < self.height
+            && !self.is_cell([x, y], CellType::Wall)
+    }
+
     pub fn for_each_in_window<F>(&self, coords: [usize; 2], window: [usize; 2], mut fnc: F)
     where
         F: FnMut(usize, usize, isize, isize, CellType),
@@ -136,5 +151,34 @@ mod tests {
                 (2, 2, 1, 1, CellType::Empty),
             ]
         );
+    }
+
+
+    #[test]
+    fn is_cell_checks_the_cell_type_at_coordinates() {
+        let mut env = GridEnv::new(1, 1);
+        env.grid.set(0, 0, 0, CellType::Finish);
+
+        assert!(env.is_cell([0, 0], CellType::Finish));
+        assert!(!env.is_cell([0, 0], CellType::Wall));
+    }
+
+    #[test]
+    fn is_valid_position_rejects_negative_coordinates_and_grid_boundaries() {
+        let env = GridEnv::new(1, 1);
+
+        assert!(!env.is_valid_position([-1, 0]));
+        assert!(!env.is_valid_position([0, -1]));
+        assert!(!env.is_valid_position([env.width as isize, 0]));
+        assert!(!env.is_valid_position([0, env.height as isize]));
+    }
+
+    #[test]
+    fn is_valid_position_rejects_walls_and_accepts_traversable_cells() {
+        let mut env = GridEnv::new(2, 1);
+        env.grid.set(0, 0, 1, CellType::Wall);
+
+        assert!(env.is_valid_position([0, 0]));
+        assert!(!env.is_valid_position([1, 0]));
     }
 }
