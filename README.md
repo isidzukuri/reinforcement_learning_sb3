@@ -8,15 +8,6 @@ compiled solver that can be benchmarked against the Python version.
 <img src="benchmarks/runtime/rust_pathfinder_output.jpg" width="300" alt="Rust pathfinder benchmark output">
 
 ## Overview
-The codebase includes:
-
-- Python packages for generating grid environments and running agents
-- DQN model creation, training, and export to ONNX
-- A pathfinding wrapper that runs an agent
-- A Rust implementation of the solver and a small HTTP service
-- Benchmark scripts and notebooks for experimentation and comparison
-
-## Repository layout
 
 - [`jupiter/`](./jupiter/) — notebooks used for experimentation and model analysis. Read for detailed description of project.
 - [`python/`](./python/) — packages used for model training
