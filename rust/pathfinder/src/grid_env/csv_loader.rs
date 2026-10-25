@@ -50,10 +50,10 @@ impl std::error::Error for CsvLoaderError {
 impl CsvLoader {
     pub fn call(path_to_file: &Path) -> Result<GridEnv, CsvLoaderError> {
         let file = File::open(path_to_file).map_err(CsvLoaderError::Io)?;
-        Self::from_reader(BufReader::new(file))
+        Self::load_from(BufReader::new(file))
     }
 
-    pub fn from_reader(reader: impl BufRead) -> Result<GridEnv, CsvLoaderError> {
+    pub fn load_from(reader: impl BufRead) -> Result<GridEnv, CsvLoaderError> {
         let mut rows = Vec::new();
         let mut start = [0, 0];
         let mut path_length = 0;
@@ -161,8 +161,8 @@ mod tests {
     use std::io::{Cursor, Read};
 
     #[test]
-    fn from_reader_ignores_comments_and_blank_lines_and_trims_cells() {
-        let grid = CsvLoader::from_reader(Cursor::new(
+    fn load_from_ignores_comments_and_blank_lines_and_trims_cells() {
+        let grid = CsvLoader::load_from(Cursor::new(
             "\n# comment without metadata\n  # unknown: value\n # start: 1, 0 \n # path_length: 4 \n 0, 1 \n\n",
         ))
         .unwrap();
@@ -175,27 +175,71 @@ mod tests {
     }
 
     #[test]
-    fn from_reader_rejects_invalid_path_length_metadata() {
+    fn load_from_rejects_invalid_path_length_metadata() {
         assert!(matches!(
-            CsvLoader::from_reader(Cursor::new("# path_length: invalid\n0\n")),
+            CsvLoader::load_from(Cursor::new("# path_length: invalid\n0\n")),
             Err(CsvLoaderError::InvalidPathLengthMetadata)
         ));
     }
 
     #[test]
-    fn from_reader_rejects_start_metadata_with_wrong_coordinate_count() {
+    fn load_from_rejects_start_metadata_with_wrong_coordinate_count() {
         assert!(matches!(
-            CsvLoader::from_reader(Cursor::new("# start: 1, 2, 3\n0\n")),
+            CsvLoader::load_from(Cursor::new("# start: 1, 2, 3\n0\n")),
             Err(CsvLoaderError::InvalidStartMetadata)
         ));
     }
 
     #[test]
-    fn from_reader_rejects_files_without_grid_rows() {
+    fn csv_loader_reports_invalid_cell_types() {
+        let result = CsvLoader::load_from(std::io::Cursor::new("0,invalid\n"));
+
         assert!(matches!(
-            CsvLoader::from_reader(Cursor::new("# comment\n\n")),
+            result,
+            Err(CsvLoaderError::InvalidCellType(value)) if value == "invalid"
+        ));
+    }
+
+    #[test]
+    fn load_from_rejects_files_without_grid_rows() {
+        assert!(matches!(
+            CsvLoader::load_from(Cursor::new("# comment\n\n")),
             Err(CsvLoaderError::EmptyOrInvalidGrid)
         ));
+    }
+
+    #[test]
+    fn load_from_rejects_rows_with_different_widths() {
+        assert!(matches!(
+            CsvLoader::load_from(Cursor::new("0,1\n2\n")),
+            Err(CsvLoaderError::InconsistentRowWidths)
+        ));
+    }
+
+    #[test]
+    fn call_rejects_empty_files() {
+        let path =
+            std::env::temp_dir().join(format!("empty_pathfinder_grid_{}.csv", std::process::id()));
+        std::fs::write(&path, "").unwrap();
+
+        let result = CsvLoader::call(&path);
+        std::fs::remove_file(&path).unwrap();
+
+        assert!(matches!(result, Err(CsvLoaderError::EmptyOrInvalidGrid)));
+    }
+
+    #[test]
+    fn call_rejects_invalid_metadata() {
+        let path = std::env::temp_dir().join(format!(
+            "invalid_pathfinder_grid_{}.csv",
+            std::process::id()
+        ));
+        std::fs::write(&path, "# start: invalid\n").unwrap();
+
+        let result = CsvLoader::call(&path);
+        std::fs::remove_file(&path).unwrap();
+
+        assert!(matches!(result, Err(CsvLoaderError::InvalidStartMetadata)));
     }
 
     #[test]
@@ -218,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn from_reader_reports_read_errors() {
+    fn load_from_reports_read_errors() {
         struct FailingReader;
 
         impl Read for FailingReader {
@@ -228,7 +272,7 @@ mod tests {
         }
 
         assert!(matches!(
-            CsvLoader::from_reader(BufReader::new(FailingReader)),
+            CsvLoader::load_from(BufReader::new(FailingReader)),
             Err(CsvLoaderError::Io(_))
         ));
     }
