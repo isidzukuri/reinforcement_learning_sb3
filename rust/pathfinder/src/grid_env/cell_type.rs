@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
 pub enum CellType {
     #[default]
     Empty = 0,
