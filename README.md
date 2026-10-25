@@ -67,3 +67,5 @@ useful place to inspect training logic and result generation.
 ## Notes
 
 Its just Proof Of Concept!
+
+...perhaps i should have used Git submodules
