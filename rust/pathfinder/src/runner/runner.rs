@@ -101,4 +101,40 @@ mod tests {
         assert_eq!(runner.call().unwrap(), expected.clone());
         assert_eq!(runner.call().unwrap(), expected);
     }
+
+    #[test]
+    fn call_stops_after_action_limit_when_finish_is_unreachable() {
+        let mut runner = test_runner([0, 0], CellType::Empty);
+
+        assert_eq!(
+            runner.call().unwrap(),
+            Solution {
+                success: false,
+                timesteps: Runner::ACTIONS_LIMIT,
+                path: vec![[0, 0]],
+            }
+        );
+    }
+
+    #[test]
+    fn is_valid_position_rejects_negative_coordinates_and_grid_boundaries() {
+        let runner = test_runner([0, 0], CellType::Empty);
+
+        assert!(!runner.is_valid_position([-1, 0]));
+        assert!(!runner.is_valid_position([0, -1]));
+        assert!(!runner.is_valid_position([runner.grid_env.width as isize, 0]));
+        assert!(!runner.is_valid_position([0, runner.grid_env.height as isize]));
+    }
+
+    #[test]
+    fn is_valid_position_rejects_walls_and_accepts_traversable_cells() {
+        let mut runner = test_runner([0, 0], CellType::Empty);
+        runner.grid_env.width = 2;
+        runner.grid_env.height = 1;
+        runner.grid_env.grid =
+            crate::tensor::Tensor::from_vec(1, 1, 2, vec![CellType::Empty, CellType::Wall]);
+
+        assert!(runner.is_valid_position([0, 0]));
+        assert!(!runner.is_valid_position([1, 0]));
+    }
 }

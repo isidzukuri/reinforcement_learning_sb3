@@ -153,3 +153,114 @@ impl CsvLoader {
         Ok(if row.is_empty() { None } else { Some(row) })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::error::Error;
+    use std::io::{Cursor, Read};
+
+    #[test]
+    fn from_reader_ignores_comments_and_blank_lines_and_trims_cells() {
+        let grid = CsvLoader::from_reader(Cursor::new(
+            "\n# comment without metadata\n  # unknown: value\n # start: 1, 0 \n # path_length: 4 \n 0, 1 \n\n",
+        ))
+        .unwrap();
+
+        assert_eq!(grid.width, 2);
+        assert_eq!(grid.height, 1);
+        assert_eq!(grid.start, [1, 0]);
+        assert_eq!(grid.path_length, 4);
+        assert_eq!(grid.grid.as_slice(), &[CellType::Empty, CellType::Finish]);
+    }
+
+    #[test]
+    fn from_reader_rejects_invalid_path_length_metadata() {
+        assert!(matches!(
+            CsvLoader::from_reader(Cursor::new("# path_length: invalid\n0\n")),
+            Err(CsvLoaderError::InvalidPathLengthMetadata)
+        ));
+    }
+
+    #[test]
+    fn from_reader_rejects_start_metadata_with_wrong_coordinate_count() {
+        assert!(matches!(
+            CsvLoader::from_reader(Cursor::new("# start: 1, 2, 3\n0\n")),
+            Err(CsvLoaderError::InvalidStartMetadata)
+        ));
+    }
+
+    #[test]
+    fn from_reader_rejects_files_without_grid_rows() {
+        assert!(matches!(
+            CsvLoader::from_reader(Cursor::new("# comment\n\n")),
+            Err(CsvLoaderError::EmptyOrInvalidGrid)
+        ));
+    }
+
+    #[test]
+    fn parse_data_line_ignores_empty_and_comment_lines() {
+        assert!(CsvLoader::parse_data_line("  ").unwrap().is_none());
+        assert!(CsvLoader::parse_data_line(" # comment ").unwrap().is_none());
+    }
+
+    #[test]
+    fn call_reports_file_open_errors() {
+        let missing_path = std::env::temp_dir().join(format!(
+            "missing_pathfinder_grid_{}.csv",
+            std::process::id()
+        ));
+
+        assert!(matches!(
+            CsvLoader::call(&missing_path),
+            Err(CsvLoaderError::Io(_))
+        ));
+    }
+
+    #[test]
+    fn from_reader_reports_read_errors() {
+        struct FailingReader;
+
+        impl Read for FailingReader {
+            fn read(&mut self, _buffer: &mut [u8]) -> io::Result<usize> {
+                Err(io::Error::other("read failed"))
+            }
+        }
+
+        assert!(matches!(
+            CsvLoader::from_reader(BufReader::new(FailingReader)),
+            Err(CsvLoaderError::Io(_))
+        ));
+    }
+
+    #[test]
+    fn error_display_and_sources_are_consistent() {
+        let io_error = CsvLoaderError::Io(io::Error::other("disk unavailable"));
+        assert!(io_error.to_string().contains("failed to read CSV file"));
+        assert!(io_error.source().is_some());
+
+        let invalid_cell = CsvLoaderError::InvalidCellType("unknown".to_owned());
+        assert_eq!(
+            invalid_cell.to_string(),
+            "Unknown cell type string: 'unknown'"
+        );
+        assert!(invalid_cell.source().is_none());
+
+        assert_eq!(
+            CsvLoaderError::InconsistentRowWidths.to_string(),
+            "Imported grid rows must have the same width."
+        );
+        assert_eq!(
+            CsvLoaderError::InvalidStartMetadata.to_string(),
+            "Invalid start metadata."
+        );
+        assert_eq!(
+            CsvLoaderError::InvalidPathLengthMetadata.to_string(),
+            "Invalid path_length metadata."
+        );
+        assert_eq!(
+            CsvLoaderError::EmptyOrInvalidGrid.to_string(),
+            "Imported file is empty or invalid."
+        );
+    }
+}

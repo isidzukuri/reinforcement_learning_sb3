@@ -120,129 +120,99 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tensor_new_and_dimensions() {
+    fn test_tensor_new() {
         let tensor: Tensor<u8> = Tensor::new(2, 4, 5);
-        assert_eq!(tensor.channels(), 2);
-        assert_eq!(tensor.height(), 4);
-        assert_eq!(tensor.width(), 5);
-        assert_eq!(tensor.as_slice().len(), 40); // 2 * 4 * 5
+        assert_eq!(tensor.as_slice().len(), 40);
         assert_eq!(*tensor.get(0, 0, 0), 0);
         assert_eq!(*tensor.get(1, 3, 4), 0);
     }
 
     #[test]
-    fn test_tensor_get_and_set() {
-        let mut tensor: Tensor<i32> = Tensor::new(3, 3, 3);
-
-        tensor.set(0, 0, 0, 10);
-        tensor.set(1, 1, 1, 20);
-        tensor.set(2, 2, 2, 30);
-
-        assert_eq!(*tensor.get(0, 0, 0), 10);
-        assert_eq!(*tensor.get(1, 1, 1), 20);
-        assert_eq!(*tensor.get(2, 2, 2), 30);
-    }
-
-    #[test]
-    fn test_tensor_get_mut() {
-        let mut tensor: Tensor<u32> = Tensor::new(1, 2, 2);
-        tensor.set(0, 1, 1, 5);
-
-        let cell = tensor.get_mut(0, 1, 1);
-        *cell += 10;
-
-        assert_eq!(*tensor.get(0, 1, 1), 15);
-    }
-
-    #[test]
     fn test_tensor_from_vec() {
-        // Shape: 1 channel, 2 height, 3 width -> 6 elements total
-        let data = vec![1, 2, 3, 4, 5, 6];
-        let tensor = Tensor::from_vec(1, 2, 3, data);
-
-        assert_eq!(*tensor.get(0, 0, 0), 1);
-        assert_eq!(*tensor.get(0, 0, 2), 3);
-        assert_eq!(*tensor.get(0, 1, 0), 4);
-        assert_eq!(*tensor.get(0, 1, 2), 6);
+        let tensor = Tensor::from_vec(1, 2, 3, vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(tensor.as_slice(), &[1, 2, 3, 4, 5, 6]);
     }
 
     #[test]
     #[should_panic(expected = "Data length does not match tensor dimensions")]
     fn test_tensor_from_vec_mismatch_panics() {
-        let data = vec![1, 2, 3];
-        // 2 channels * 2 height * 2 width requires 8 elements, but only 3 provided
-        let _tensor: Tensor<u8> = Tensor::from_vec(2, 2, 2, data);
+        let _tensor: Tensor<u8> = Tensor::from_vec(2, 2, 2, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_tensor_get() {
+        let tensor = Tensor::from_vec(2, 2, 2, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(*tensor.get(1, 0, 1), 6);
+    }
+
+    #[test]
+    fn test_tensor_get_mut() {
+        let mut tensor: Tensor<u32> = Tensor::new(1, 2, 2);
+        *tensor.get_mut(0, 1, 1) = 15;
+        assert_eq!(*tensor.get(0, 1, 1), 15);
+    }
+
+    #[test]
+    fn test_tensor_set() {
+        let mut tensor: Tensor<i32> = Tensor::new(1, 2, 2);
+        tensor.set(0, 1, 0, 42);
+        assert_eq!(*tensor.get(0, 1, 0), 42);
+    }
+
+    #[test]
+    fn test_tensor_channels() {
+        let tensor: Tensor<u8> = Tensor::new(2, 4, 5);
+        assert_eq!(tensor.channels(), 2);
+    }
+
+    #[test]
+    fn test_tensor_height() {
+        let tensor: Tensor<u8> = Tensor::new(2, 4, 5);
+        assert_eq!(tensor.height(), 4);
+    }
+
+    #[test]
+    fn test_tensor_width() {
+        let tensor: Tensor<u8> = Tensor::new(2, 4, 5);
+        assert_eq!(tensor.width(), 5);
+    }
+
+    #[test]
+    fn test_tensor_as_slice() {
+        let tensor = Tensor::from_vec(1, 2, 2, vec![10, 20, 30, 40]);
+        assert_eq!(tensor.as_slice(), &[10, 20, 30, 40]);
     }
 
     #[test]
     fn test_tensor_into_vec() {
-        // Create a small tensor and populate it
-        let mut tensor: Tensor<i32> = Tensor::new(1, 2, 2);
-        tensor.set(0, 0, 0, 10);
-        tensor.set(0, 0, 1, 20);
-        tensor.set(0, 1, 0, 30);
-        tensor.set(0, 1, 1, 40);
-
-        // Convert into a vector
-        let data_vec = tensor.into_vec();
-
-        // Verify the extracted vector matches the expected layout
-        assert_eq!(data_vec, vec![10, 20, 30, 40]);
-
-        // Note: Trying to use `tensor` after this point would fail
-        // at compile time because `into_vec` consumes ownership (takes `self`).
+        let tensor = Tensor::from_vec(1, 2, 2, vec![10, 20, 30, 40]);
+        assert_eq!(tensor.into_vec(), vec![10, 20, 30, 40]);
     }
 
     #[test]
-    fn test_tensor_channel_slices() {
-        // Shape: 2 channels, 2 height, 3 width -> 12 elements total (6 per channel)
-        let mut tensor: Tensor<i32> = Tensor::new(2, 2, 3);
+    fn test_tensor_channel_mut() {
+        let mut tensor: Tensor<i32> = Tensor::new(2, 2, 2);
+        tensor.channel_mut(1).copy_from_slice(&[1, 2, 3, 4]);
+        assert_eq!(tensor.as_slice(), &[0, 0, 0, 0, 1, 2, 3, 4]);
+    }
 
-        // Populate channel 0 and channel 1 with distinct values
-        tensor.fill_channel(0, 10);
-        tensor.fill_channel(1, 20);
-
-        // Verify immutable channel slices
-        assert_eq!(tensor.channel(0), &[10, 10, 10, 10, 10, 10]);
-        assert_eq!(tensor.channel(1), &[20, 20, 20, 20, 20, 20]);
-
-        // Verify mutable channel manipulation
-        let ch0_mut = tensor.channel_mut(0);
-        ch0_mut[0] = 99;
-        assert_eq!(tensor.get(0, 0, 0), &99);
-        // Ensure channel 1 was unaffected
-        assert_eq!(tensor.get(1, 0, 0), &20);
+    #[test]
+    fn test_tensor_channel() {
+        let tensor = Tensor::from_vec(2, 2, 2, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(tensor.channel(1), &[5, 6, 7, 8]);
     }
 
     #[test]
     fn test_tensor_fill_channel() {
-        let mut tensor: Tensor<f32> = Tensor::new(3, 2, 2); // 3 channels, 4 elements each
-
-        // Fill only channel 1 with 1.0
-        tensor.fill_channel(1, 1.0);
-
-        // Check channel 0 remains default (0.0)
-        assert_eq!(tensor.channel(0), &[0.0, 0.0, 0.0, 0.0]);
-        // Check channel 1 is filled with 1.0
-        assert_eq!(tensor.channel(1), &[1.0, 1.0, 1.0, 1.0]);
-        // Check channel 2 remains default (0.0)
-        assert_eq!(tensor.channel(2), &[0.0, 0.0, 0.0, 0.0]);
+        let mut tensor: Tensor<i32> = Tensor::new(2, 2, 2);
+        tensor.fill_channel(1, 7);
+        assert_eq!(tensor.as_slice(), &[0, 0, 0, 0, 7, 7, 7, 7]);
     }
 
     #[test]
-    fn test_tensor_fill_entire_tensor() {
-        // Create a 2-channel, 2x2 tensor (8 elements total)
+    fn test_tensor_fill() {
         let mut tensor: Tensor<i32> = Tensor::new(2, 2, 2);
-
-        // Initially all zeros
-        assert_eq!(tensor.as_slice(), &[0, 0, 0, 0, 0, 0, 0, 0]);
-
-        // Fill the entire tensor with 42
         tensor.fill(42);
-
-        // Verify every element across all channels, rows, and columns is 42
         assert_eq!(tensor.as_slice(), &[42, 42, 42, 42, 42, 42, 42, 42]);
-        assert_eq!(*tensor.get(0, 0, 0), 42);
-        assert_eq!(*tensor.get(1, 1, 1), 42);
     }
 }
