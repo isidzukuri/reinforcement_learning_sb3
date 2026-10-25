@@ -21,7 +21,7 @@ impl Runner {
         solution.path.push(agent_pos);
 
         for _ in 0..Self::ACTIONS_LIMIT {
-            if *self.grid_env.grid.get(0, agent_pos[1], agent_pos[0]) == CellType::Finish {
+            if self.grid_env.is_cell(agent_pos, CellType::Finish) {
                 solution.success = true;
                 return Ok(solution);
             }
@@ -54,7 +54,7 @@ impl Runner {
 
         x < self.grid_env.width
             && y < self.grid_env.height
-            && *self.grid_env.grid.get(0, y, x) != CellType::Wall
+            && !self.grid_env.is_cell([x, y], CellType::Wall)
     }
 }
 

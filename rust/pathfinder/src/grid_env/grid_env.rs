@@ -23,6 +23,10 @@ impl GridEnv {
         }
     }
 
+    pub fn is_cell(&self, coords: [usize; 2], cell_type: CellType) -> bool {
+        *self.grid.get(Self::TENSOR_LAYER, coords[1], coords[0]) == cell_type
+    }
+
     pub fn for_each_in_window<F>(&self, coords: [usize; 2], window: [usize; 2], mut fnc: F)
     where
         F: FnMut(usize, usize, isize, isize, CellType),
