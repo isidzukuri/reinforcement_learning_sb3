@@ -59,3 +59,38 @@ impl Printer {
         print!("{}", Self::render(env, path));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_includes_expected_summary_grid_and_highlights_path() {
+        let env = GridEnv::new(2, 2);
+        let path = [[0, 0], [1, 0]];
+
+        let rendered = Printer::render(&env, Some(&path));
+
+        assert!(rendered.starts_with("=== GridEnv Configuration ===\n"));
+        assert!(rendered.contains("Size (Width, Height): (2, 2)"));
+        assert!(rendered.contains("Start Coordinate: [0, 0]"));
+        assert!(rendered.contains("Generated Path Length: 0"));
+        assert!(rendered.contains("Actual Taken Path Length: 2"));
+        assert!(rendered.contains("TYPES:"));
+        assert!(rendered.contains("ACTIONS: [Top, Bottom, Left, Right]"));
+        assert!(rendered.contains("=== Grid Matrix ==="));
+        assert!(rendered.contains("\u{1b}[48;2;144;238;144m"));
+        assert!(rendered.ends_with("============================\n"));
+    }
+
+    #[test]
+    fn render_without_path_omits_actual_taken_path_length() {
+        let env = GridEnv::new(1, 1);
+
+        let rendered = Printer::render(&env, None);
+
+        assert!(!rendered.contains("Actual Taken Path Length"));
+        assert!(rendered.contains("Generated Path Length: 0"));
+        assert!(rendered.contains("=== Grid Matrix ==="));
+    }
+}

@@ -18,3 +18,16 @@ impl Action {
 
     pub const ALL: [Action; 4] = [Action::Top, Action::Bottom, Action::Left, Action::Right];
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Action;
+
+    #[test]
+    fn actions_produce_expected_deltas() {
+        assert_eq!(Action::Top.delta(), [0, -1]);
+        assert_eq!(Action::Bottom.delta(), [0, 1]);
+        assert_eq!(Action::Left.delta(), [-1, 0]);
+        assert_eq!(Action::Right.delta(), [1, 0]);
+    }
+}

@@ -34,3 +34,21 @@ impl FromStr for CellType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::CellType;
+
+    #[test]
+    fn cell_types_have_expected_ids_and_counts() {
+        assert_eq!(CellType::Empty as u8, 0);
+        assert_eq!(CellType::Finish as u8, 1);
+        assert_eq!(CellType::Bonus as u8, 2);
+        assert_eq!(CellType::Wall as u8, 3);
+
+        assert_eq!(CellType::Empty.count(), None);
+        assert_eq!(CellType::Finish.count(), Some(1));
+        assert_eq!(CellType::Bonus.count(), Some(5));
+        assert_eq!(CellType::Wall.count(), Some(15));
+    }
+}

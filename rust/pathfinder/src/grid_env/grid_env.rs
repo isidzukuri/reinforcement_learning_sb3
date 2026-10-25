@@ -57,3 +57,80 @@ impl GridEnv {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_creates_empty_grid_with_default_start() {
+        let env = GridEnv::new(3, 2);
+
+        assert_eq!(env.width, 3);
+        assert_eq!(env.height, 2);
+        assert_eq!(env.start, [0, 0]);
+        assert_eq!(env.path_length, 0);
+        assert_eq!(env.grid.channels(), 1);
+        assert_eq!(env.grid.width(), 3);
+        assert_eq!(env.grid.height(), 2);
+        assert!(
+            env.grid
+                .as_slice()
+                .iter()
+                .all(|&cell| cell == CellType::Empty)
+        );
+    }
+
+    #[test]
+    fn for_each_in_window_visits_cells_in_row_major_order_with_coordinates() {
+        let mut env = GridEnv::new(2, 2);
+        env.grid.set(0, 0, 0, CellType::Finish);
+        env.grid.set(0, 0, 1, CellType::Bonus);
+        env.grid.set(0, 1, 0, CellType::Wall);
+        env.grid.set(0, 1, 1, CellType::Empty);
+        let mut visited = Vec::new();
+
+        env.for_each_in_window([1, 1], [2, 2], |local_x, local_y, x, y, cell_type| {
+            visited.push((local_x, local_y, x, y, cell_type));
+        });
+
+        assert_eq!(
+            visited,
+            vec![
+                (0, 0, 0, 0, CellType::Finish),
+                (1, 0, 1, 0, CellType::Bonus),
+                (0, 1, 0, 1, CellType::Wall),
+                (1, 1, 1, 1, CellType::Empty),
+            ]
+        );
+    }
+
+    #[test]
+    fn for_each_in_window_reports_wall_for_out_of_bounds_coordinates() {
+        let mut env = GridEnv::new(2, 2);
+        env.grid.set(0, 0, 0, CellType::Finish);
+        env.grid.set(0, 0, 1, CellType::Bonus);
+        env.grid.set(0, 1, 0, CellType::Wall);
+        env.grid.set(0, 1, 1, CellType::Empty);
+        let mut visited = Vec::new();
+
+        env.for_each_in_window([0, 0], [3, 3], |local_x, local_y, x, y, cell_type| {
+            visited.push((local_x, local_y, x, y, cell_type));
+        });
+
+        assert_eq!(
+            visited,
+            vec![
+                (0, 0, -1, -1, CellType::Wall),
+                (1, 0, 0, -1, CellType::Wall),
+                (2, 0, 1, -1, CellType::Wall),
+                (0, 1, -1, 0, CellType::Wall),
+                (1, 1, 0, 0, CellType::Finish),
+                (2, 1, 1, 0, CellType::Bonus),
+                (0, 2, -1, 1, CellType::Wall),
+                (1, 2, 0, 1, CellType::Wall),
+                (2, 2, 1, 1, CellType::Empty),
+            ]
+        );
+    }
+}
