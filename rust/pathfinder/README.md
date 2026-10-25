@@ -1,6 +1,6 @@
 # Rust Pathfinder
 
-This crate runs a grid-world pathfinder using an ONNX model.
+Runs a grid-world pathfinder using a model in ONNX format.
 
 
 ## Usage
