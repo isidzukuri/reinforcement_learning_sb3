@@ -28,7 +28,7 @@ The codebase includes:
 ## Prerequisites
 
 - Python 3.9+
-- `pip` for installing local packages
+- `pip` for installing packages
 - `cargo` if you want to build or run the Rust solver/service
 
 ## Quick start
