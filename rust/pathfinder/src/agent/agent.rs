@@ -8,7 +8,6 @@ use crate::tensor::Tensor;
 pub struct Agent {
     model: Model,
     window_size: [usize; 2],
-    memory_grid_size: [usize; 2],
     known_env_map: Tensor<f32>,
 }
 
@@ -20,7 +19,6 @@ impl Agent {
         Self {
             model,
             window_size,
-            memory_grid_size,
             known_env_map,
         }
     }
@@ -42,8 +40,8 @@ impl Agent {
         let half_window_width = (window_width as isize) / 2;
         let half_window_height = (window_height as isize) / 2;
 
-        let memory_width = self.memory_grid_size[0] as isize;
-        let memory_height = self.memory_grid_size[1] as isize;
+        let memory_width = self.known_env_map.width() as isize;
+        let memory_height = self.known_env_map.height() as isize;
 
         let num_channels = self.known_env_map.channels();
         let mut tensor_data = Tensor::new(num_channels, window_height, window_width);
@@ -65,17 +63,15 @@ impl Agent {
                 let clip_start_x = start_grid_x.max(0);
                 let clip_end_x = end_grid_x.min(memory_width - 1);
 
-                if clip_start_x <= clip_end_x {
+                if clip_start_x > clip_end_x {
                     let length = (clip_end_x - clip_start_x + 1) as usize;
                     let dx_local_start = (clip_start_x - start_grid_x) as usize;
                     let gx_start = clip_start_x as usize;
 
                     // Source slice from global memory map
-                    let src_idx = channel_idx
-                        * (self.memory_grid_size[1] * self.memory_grid_size[0])
-                        + gy * self.memory_grid_size[0]
-                        + gx_start;
-                    let src_slice = &self.known_env_map.as_slice()[src_idx..src_idx + length];
+                    let src_start = gy * self.known_env_map.width() + gx_start;
+                    let src_slice =
+                        &self.known_env_map.channel(channel_idx)[src_start..src_start + length];
 
                     // Destination slice within the target channel view
                     let dst_start = dy_local * window_width + dx_local_start;
@@ -137,8 +133,8 @@ impl Agent {
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
-        let memory_width = self.memory_grid_size[0] as isize;
-        let memory_height = self.memory_grid_size[1] as isize;
+        let memory_width = self.known_env_map.width() as isize;
+        let memory_height = self.known_env_map.height() as isize;
 
         // Mark current agent position as visited in the Visited layer
         if agent_x >= 0 && agent_x < memory_width && agent_y >= 0 && agent_y < memory_height {
