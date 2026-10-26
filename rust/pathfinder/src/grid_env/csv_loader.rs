@@ -24,12 +24,12 @@ impl fmt::Display for CsvLoaderError {
         match self {
             Self::Io(error) => write!(f, "failed to read CSV file: {error}"),
             Self::EmptyOrInvalidGrid => f.write_str("Imported file is empty or invalid."),
-            Self::InconsistentRowWidths => {
-                f.write_str("Imported grid rows must have the same width.")
-            }
             Self::InvalidStartMetadata => f.write_str("Invalid start metadata."),
             Self::InvalidPathLengthMetadata => f.write_str("Invalid path_length metadata."),
             Self::InvalidCellType(value) => write!(f, "Unknown cell type string: '{value}'"),
+            Self::InconsistentRowWidths => {
+                f.write_str("Imported grid rows must have the same width.")
+            }
         }
     }
 }
