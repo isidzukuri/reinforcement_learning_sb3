@@ -22,108 +22,12 @@ impl Agent {
         }
     }
 
+    /// Resets the agent's memory of the environment
     pub fn reset(&mut self) {
         self.known_env.fill(0.0);
     }
 
-    /// Extracts the local observation window tensor around the agent's position.
-    pub fn get_observation_tensor(
-        &self,
-        agent_pos: [usize; 2],
-    ) -> Result<OrtTensor<f32>, AgentError> {
-        let agent_x = agent_pos[0] as isize;
-        let agent_y = agent_pos[1] as isize;
-
-        let window_width = self.window_size[0];
-        let window_height = self.window_size[1];
-        let half_window_width = (window_width as isize) / 2;
-        let half_window_height = (window_height as isize) / 2;
-
-        let memory_width = self.known_env.width() as isize;
-        let memory_height = self.known_env.height() as isize;
-
-        let num_channels = self.known_env.channels();
-        let mut tensor_data = Tensor::new(num_channels, window_height, window_width);
-        tensor_data.fill_channel(TensorLayer::Wall as usize, 1.0);
-
-        let start_grid_x = agent_x - half_window_width;
-        let end_grid_x = start_grid_x + (window_width as isize) - 1;
-
-        let clip_start_x = start_grid_x.max(0);
-        let clip_end_x = end_grid_x.min(memory_width - 1);
-
-        let length = (clip_end_x - clip_start_x + 1) as usize;
-        let dx_local_start = (clip_start_x - start_grid_x) as usize;
-        let gx_start = clip_start_x as usize;
-        let env_width = self.known_env.width();
-
-        for dy_local in 0..window_height {
-            let grid_y = agent_y + (dy_local as isize) - half_window_height;
-
-            if !(grid_y >= 0 && grid_y < memory_height) {
-                continue;
-            }
-
-            let gy = grid_y as usize;
-            let src_start = gy * env_width + gx_start;
-            let dst_start = dy_local * window_width + dx_local_start;
-
-            for channel_idx in 0..num_channels {
-                let src_slice =
-                    &self.known_env.channel(channel_idx)[src_start..src_start + length];
-                let dst_slice =
-                    &mut tensor_data.channel_mut(channel_idx)[dst_start..dst_start + length];
-
-                dst_slice.copy_from_slice(src_slice);
-            }
-        }
-
-        let shape = [1, num_channels, window_height, window_width];
-        let tensor = OrtTensor::from_array((shape, tensor_data.into_vec()))
-            .map_err(AgentError::ObservationTensor)?;
-
-        Ok(tensor)
-    }
-
-    /// Chooses the next action by building the observation tensor for the agent's
-    /// current position, running the model inference, and returning the action with
-    /// the highest predicted value.
-    pub fn select_action(&mut self, agent_pos: [usize; 2]) -> Result<Action, AgentError> {
-        let obs_tensor = self.get_observation_tensor(agent_pos)?;
-        let outputs = self
-            .model
-            .run(ort::inputs![obs_tensor])
-            .map_err(AgentError::Inference)?;
-
-        let output = outputs
-            .values()
-            .next()
-            .ok_or(AgentError::MissingModelOutput)?;
-        let (_shape, data) = output
-            .try_extract_tensor::<f32>()
-            .map_err(AgentError::OutputTensor)?;
-
-        Self::action_from_output(data)
-    }
-
-    fn action_from_output(data: &[f32]) -> Result<Action, AgentError> {
-        let action_index = data
-            .iter()
-            .enumerate()
-            .filter(|&(_, &v)| !v.is_nan())
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(idx, _)| idx)
-            .ok_or(AgentError::NoValidActionValues)?;
-
-        let action = Action::ALL
-            .get(action_index)
-            .copied()
-            .ok_or(AgentError::InvalidActionIndex(action_index))?;
-
-        Ok(action)
-    }
-
-    /// Updates the global memory map directly from the GridEnv.
+    /// Updates the agent's memory directly from the GridEnv.
     pub fn update_memory(&mut self, agent_pos: [usize; 2], grid_env: &GridEnv) {
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
@@ -183,6 +87,102 @@ impl Agent {
                     .set(TensorLayer::Revealed as usize, gy, gx, 1.0);
             },
         );
+    }
+
+    /// Chooses the next action by building the observation tensor for the agent's
+    /// current position, running the model inference, and returning the action with
+    /// the highest predicted value.
+    pub fn select_action(&mut self, agent_pos: [usize; 2]) -> Result<Action, AgentError> {
+        let obs_tensor = self.get_observation_tensor(agent_pos)?;
+        let outputs = self
+            .model
+            .run(ort::inputs![obs_tensor])
+            .map_err(AgentError::Inference)?;
+
+        let output = outputs
+            .values()
+            .next()
+            .ok_or(AgentError::MissingModelOutput)?;
+        let (_shape, data) = output
+            .try_extract_tensor::<f32>()
+            .map_err(AgentError::OutputTensor)?;
+
+        Self::action_from_output(data)
+    }
+
+    fn action_from_output(data: &[f32]) -> Result<Action, AgentError> {
+        let action_index = data
+            .iter()
+            .enumerate()
+            .filter(|&(_, &v)| !v.is_nan())
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(idx, _)| idx)
+            .ok_or(AgentError::NoValidActionValues)?;
+
+        let action = Action::ALL
+            .get(action_index)
+            .copied()
+            .ok_or(AgentError::InvalidActionIndex(action_index))?;
+
+        Ok(action)
+    }
+
+    /// Extracts the local observation window tensor around the agent's position.
+    pub fn get_observation_tensor(
+        &self,
+        agent_pos: [usize; 2],
+    ) -> Result<OrtTensor<f32>, AgentError> {
+        let agent_x = agent_pos[0] as isize;
+        let agent_y = agent_pos[1] as isize;
+
+        let window_width = self.window_size[0];
+        let window_height = self.window_size[1];
+        let half_window_width = (window_width as isize) / 2;
+        let half_window_height = (window_height as isize) / 2;
+
+        let memory_width = self.known_env.width() as isize;
+        let memory_height = self.known_env.height() as isize;
+
+        let num_channels = self.known_env.channels();
+        let mut tensor_data = Tensor::new(num_channels, window_height, window_width);
+        tensor_data.fill_channel(TensorLayer::Wall as usize, 1.0);
+
+        let start_grid_x = agent_x - half_window_width;
+        let end_grid_x = start_grid_x + (window_width as isize) - 1;
+
+        let clip_start_x = start_grid_x.max(0);
+        let clip_end_x = end_grid_x.min(memory_width - 1);
+
+        let length = (clip_end_x - clip_start_x + 1) as usize;
+        let dx_local_start = (clip_start_x - start_grid_x) as usize;
+        let gx_start = clip_start_x as usize;
+        let env_width = self.known_env.width();
+
+        for dy_local in 0..window_height {
+            let grid_y = agent_y + (dy_local as isize) - half_window_height;
+
+            if !(grid_y >= 0 && grid_y < memory_height) {
+                continue;
+            }
+
+            let gy = grid_y as usize;
+            let src_start = gy * env_width + gx_start;
+            let dst_start = dy_local * window_width + dx_local_start;
+
+            for channel_idx in 0..num_channels {
+                let src_slice = &self.known_env.channel(channel_idx)[src_start..src_start + length];
+                let dst_slice =
+                    &mut tensor_data.channel_mut(channel_idx)[dst_start..dst_start + length];
+
+                dst_slice.copy_from_slice(src_slice);
+            }
+        }
+
+        let shape = [1, num_channels, window_height, window_width];
+        let tensor = OrtTensor::from_array((shape, tensor_data.into_vec()))
+            .map_err(AgentError::ObservationTensor)?;
+
+        Ok(tensor)
     }
 }
 
