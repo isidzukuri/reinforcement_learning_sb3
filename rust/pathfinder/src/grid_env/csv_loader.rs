@@ -114,24 +114,34 @@ impl CsvLoader {
         let metadata = metadata.trim();
         let value = value.trim();
 
-        if metadata == "start" {
-            let coordinates: Result<Vec<usize>, _> = value
-                .split(',')
-                .map(|s| s.trim().parse::<usize>())
-                .collect();
-
-            let coords = coordinates.map_err(|_| CsvLoaderError::InvalidStartMetadata)?;
-            if coords.len() != 2 {
-                return Err(CsvLoaderError::InvalidStartMetadata);
-            }
-            *start = [coords[0], coords[1]];
-        } else if metadata == "path_length" {
-            *path_length = value
-                .parse::<usize>()
-                .map_err(|_| CsvLoaderError::InvalidPathLengthMetadata)?;
+        match metadata {
+            "start" => *start = Self::parse_start_metadata(value)?,
+            "path_length" => *path_length = Self::parse_path_length_metadata(value)?,
+            _ => {}
         }
 
         Ok(true)
+    }
+
+    fn parse_start_metadata(value: &str) -> Result<[usize; 2], CsvLoaderError> {
+        let coords: Vec<usize> = value
+            .split(',')
+            .map(|st| {
+                st.trim()
+                    .parse()
+                    .map_err(|_| CsvLoaderError::InvalidStartMetadata)
+            })
+            .collect::<Result<_, _>>()?;
+
+        coords
+            .try_into()
+            .map_err(|_| CsvLoaderError::InvalidStartMetadata)
+    }
+
+    fn parse_path_length_metadata(value: &str) -> Result<usize, CsvLoaderError> {
+        value
+            .parse::<usize>()
+            .map_err(|_| CsvLoaderError::InvalidPathLengthMetadata)
     }
 
     fn parse_data_line(line: &str) -> Result<Option<Vec<CellType>>, CsvLoaderError> {
