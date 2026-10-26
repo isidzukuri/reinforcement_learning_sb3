@@ -104,7 +104,7 @@ impl<T> Tensor<T> {
     #[inline]
     pub fn channel(&self, channel: usize) -> &[T] {
         let range = self.channel_range(channel);
-        &self.data[self.channel_range(range)]
+        &self.data[range]
     }
 
     /// Fills an entire channel's memory block with a specified value.
