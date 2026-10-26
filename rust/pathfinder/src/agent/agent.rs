@@ -49,36 +49,32 @@ impl Agent {
         let start_grid_x = agent_x - half_window_width;
         let end_grid_x = start_grid_x + (window_width as isize) - 1;
 
-        for channel_idx in 0..num_channels {
-            for dy_local in 0..window_height {
-                let grid_y = agent_y + (dy_local as isize) - half_window_height;
+        let clip_start_x = start_grid_x.max(0);
+        let clip_end_x = end_grid_x.min(memory_width - 1);
 
-                if !(grid_y >= 0 && grid_y < memory_height) {
-                    continue;
-                }
+        let length = (clip_end_x - clip_start_x + 1) as usize;
+        let dx_local_start = (clip_start_x - start_grid_x) as usize;
+        let gx_start = clip_start_x as usize;
+        let env_width = self.known_env.width();
 
-                let gy = grid_y as usize;
+        for dy_local in 0..window_height {
+            let grid_y = agent_y + (dy_local as isize) - half_window_height;
 
-                let clip_start_x = start_grid_x.max(0);
-                let clip_end_x = end_grid_x.min(memory_width - 1);
+            if !(grid_y >= 0 && grid_y < memory_height) {
+                continue;
+            }
 
-                if clip_start_x <= clip_end_x {
-                    let length = (clip_end_x - clip_start_x + 1) as usize;
-                    let dx_local_start = (clip_start_x - start_grid_x) as usize;
-                    let gx_start = clip_start_x as usize;
+            let gy = grid_y as usize;
+            let src_start = gy * env_width + gx_start;
+            let dst_start = dy_local * window_width + dx_local_start;
 
-                    // Source slice from global memory map
-                    let src_start = gy * self.known_env.width() + gx_start;
-                    let src_slice =
-                        &self.known_env.channel(channel_idx)[src_start..src_start + length];
+            for channel_idx in 0..num_channels {
+                let src_slice =
+                    &self.known_env.channel(channel_idx)[src_start..src_start + length];
+                let dst_slice =
+                    &mut tensor_data.channel_mut(channel_idx)[dst_start..dst_start + length];
 
-                    // Destination slice within the target channel view
-                    let dst_start = dy_local * window_width + dx_local_start;
-                    let dst_slice =
-                        &mut tensor_data.channel_mut(channel_idx)[dst_start..dst_start + length];
-
-                    dst_slice.copy_from_slice(src_slice);
-                }
+                dst_slice.copy_from_slice(src_slice);
             }
         }
 
