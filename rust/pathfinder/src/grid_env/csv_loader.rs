@@ -54,7 +54,9 @@ impl CsvLoader {
     }
 
     pub fn load_from(reader: impl BufRead) -> Result<GridEnv, CsvLoaderError> {
-        let mut rows = Vec::new();
+        let mut cells = Vec::new();
+        let mut height = 0;
+        let mut width = None;
         let mut start = [0, 0];
         let mut path_length = 0;
 
@@ -65,25 +67,27 @@ impl CsvLoader {
                 continue;
             }
 
-            if Self::parse_header_line(&line, &mut start, &mut path_length)? {
+            if Self::parse_header_line(&trimmed, &mut start, &mut path_length)? {
                 continue;
             }
 
-            if let Some(row) = Self::parse_data_line(&line)? {
-                rows.push(row);
+            let Some(row) = Self::parse_data_line(trimmed)? else {
+                continue;
+            };
+
+            match width {
+                None => width = Some(row.len()),
+                Some(expected_width) if row.len() != expected_width => {
+                    return Err(CsvLoaderError::InconsistentRowWidths);
+                }
+                _ => {}
             }
+
+            height += 1;
+            cells.extend(row);
         }
 
-        if rows.is_empty() {
-            return Err(CsvLoaderError::EmptyOrInvalidGrid);
-        }
-
-        let height = rows.len();
-        let width = rows[0].len();
-        if rows.iter().any(|row| row.len() != width) {
-            return Err(CsvLoaderError::InconsistentRowWidths);
-        }
-        let cells = rows.into_iter().flatten().collect();
+        let width = width.ok_or(CsvLoaderError::EmptyOrInvalidGrid)?;
 
         Ok(GridEnv {
             width,
@@ -99,7 +103,7 @@ impl CsvLoader {
         start: &mut [usize; 2],
         path_length: &mut usize,
     ) -> Result<bool, CsvLoaderError> {
-        let Some(content) = line.trim().strip_prefix('#') else {
+        let Some(content) = line.strip_prefix('#') else {
             return Ok(false);
         };
 
@@ -131,16 +135,7 @@ impl CsvLoader {
     }
 
     fn parse_data_line(line: &str) -> Result<Option<Vec<CellType>>, CsvLoaderError> {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            return Ok(None);
-        }
-
-        if trimmed.starts_with('#') {
-            return Ok(None);
-        }
-
-        let row = trimmed
+        let row = line
             .split(',')
             .map(|value| {
                 let value = value.trim();
@@ -240,12 +235,6 @@ mod tests {
         std::fs::remove_file(&path).unwrap();
 
         assert!(matches!(result, Err(CsvLoaderError::InvalidStartMetadata)));
-    }
-
-    #[test]
-    fn parse_data_line_ignores_empty_and_comment_lines() {
-        assert!(CsvLoader::parse_data_line("  ").unwrap().is_none());
-        assert!(CsvLoader::parse_data_line(" # comment ").unwrap().is_none());
     }
 
     #[test]
