@@ -34,19 +34,6 @@ impl<T> Tensor<T> {
         }
     }
 
-    /// Computes the flat buffer index for a given (channel, row, column).
-    #[inline]
-    fn index(&self, channel: usize, row: usize, column: usize) -> usize {
-        channel * (self.height * self.width) + row * self.width + column
-    }
-
-    #[inline]
-    fn channel_range(&self, channel: usize) -> std::ops::Range<usize> {
-        let channel_size = self.height * self.width;
-        let start = channel * channel_size;
-        start..start + channel_size
-    }
-
     /// Gets an immutable reference to a cell at (channel, row, column).
     #[inline]
     pub fn get(&self, channel: usize, row: usize, column: usize) -> &T {
@@ -123,6 +110,20 @@ impl<T> Tensor<T> {
         T: Clone,
     {
         self.data.fill(value);
+    }
+
+    /// Computes the flat buffer index for a given (channel, row, column).
+    #[inline]
+    fn index(&self, channel: usize, row: usize, column: usize) -> usize {
+        channel * (self.height * self.width) + row * self.width + column
+    }
+
+    /// Computes the flat buffer range for a given channel.
+    #[inline]
+    fn channel_range(&self, channel: usize) -> std::ops::Range<usize> {
+        let channel_size = self.height * self.width;
+        let start = channel * channel_size;
+        start..start + channel_size
     }
 }
 
