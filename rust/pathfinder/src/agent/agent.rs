@@ -1,5 +1,5 @@
 use ort::session::Session as Model;
-use ort::value::Tensor as OrtTensor;
+use ort::value::TensorRef;
 
 use super::{AgentError, TensorLayer};
 use crate::grid_env::{Action, CellType, GridEnv};
@@ -9,16 +9,19 @@ pub struct Agent {
     model: Model,
     window_size: [usize; 2],
     known_env: Tensor<f32>,
+    observation_buffer: Tensor<f32>,
 }
 
 impl Agent {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
         let known_env = Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
+        let observation_buffer = Tensor::new(TensorLayer::len(), window_size[1], window_size[0]);
 
         Self {
             model,
             window_size,
             known_env,
+            observation_buffer,
         }
     }
 
@@ -93,10 +96,21 @@ impl Agent {
     /// current position, running the model inference, and returning the action with
     /// the highest predicted value.
     pub fn select_action(&mut self, agent_pos: [usize; 2]) -> Result<Action, AgentError> {
-        let obs_tensor = self.get_observation_tensor(agent_pos)?;
+        self.fill_observation_buffer(agent_pos);
+
+        let shape = [
+            1,
+            self.known_env.channels(),
+            self.window_size[1],
+            self.window_size[0],
+        ];
+
+        let tensor_ref = TensorRef::from_array_view((shape, self.observation_buffer.as_slice()))
+            .map_err(AgentError::ObservationTensor)?;
+
         let outputs = self
             .model
-            .run(ort::inputs![obs_tensor])
+            .run(ort::inputs![tensor_ref])
             .map_err(AgentError::Inference)?;
 
         let output = outputs
@@ -107,7 +121,9 @@ impl Agent {
             .try_extract_tensor::<f32>()
             .map_err(AgentError::OutputTensor)?;
 
-        Self::action_from_output(data)
+        let action = Self::action_from_output(data)?;
+
+        Ok(action)
     }
 
     fn action_from_output(data: &[f32]) -> Result<Action, AgentError> {
@@ -127,11 +143,10 @@ impl Agent {
         Ok(action)
     }
 
-    /// Extracts the local observation window tensor around the agent's position.
-    pub fn get_observation_tensor(
-        &self,
-        agent_pos: [usize; 2],
-    ) -> Result<OrtTensor<f32>, AgentError> {
+    /// Fills the local observation window buffer around the agent's position.
+    fn fill_observation_buffer(&mut self, agent_pos: [usize; 2]) {
+        self.observation_buffer.fill(0.0);
+        
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
@@ -144,8 +159,7 @@ impl Agent {
         let memory_height = self.known_env.height() as isize;
 
         let num_channels = self.known_env.channels();
-        let mut tensor_data = Tensor::new(num_channels, window_height, window_width);
-        tensor_data.fill_channel(TensorLayer::Wall as usize, 1.0);
+        self.observation_buffer.fill_channel(TensorLayer::Wall as usize, 1.0);
 
         let start_grid_x = agent_x - half_window_width;
         let end_grid_x = start_grid_x + (window_width as isize) - 1;
@@ -172,17 +186,11 @@ impl Agent {
             for channel_idx in 0..num_channels {
                 let src_slice = &self.known_env.channel(channel_idx)[src_start..src_start + length];
                 let dst_slice =
-                    &mut tensor_data.channel_mut(channel_idx)[dst_start..dst_start + length];
+                    &mut self.observation_buffer.channel_mut(channel_idx)[dst_start..dst_start + length];
 
                 dst_slice.copy_from_slice(src_slice);
             }
         }
-
-        let shape = [1, num_channels, window_height, window_width];
-        let tensor = OrtTensor::from_array((shape, tensor_data.into_vec()))
-            .map_err(AgentError::ObservationTensor)?;
-
-        Ok(tensor)
     }
 }
 
@@ -217,14 +225,22 @@ mod tests {
         grid
     }
 
-    fn observation_data(agent: &Agent, position: [usize; 2]) -> Vec<f32> {
-        let tensor = agent
-            .get_observation_tensor(position)
-            .expect("observation tensor should be constructed");
-        let (_shape, data) = tensor
+    fn observation_data(agent: &mut Agent, position: [usize; 2]) -> Vec<f32> {
+        agent.fill_observation_buffer(position);
+        let shape = [
+            1,
+            agent.known_env.channels(),
+            agent.window_size[1],
+            agent.window_size[0],
+        ];
+        let tensor_ref = TensorRef::from_array_view((shape, agent.observation_buffer.as_slice()))
+            .expect("observation tensor reference should be constructed");
+        let (_shape, data) = tensor_ref
             .try_extract_tensor::<f32>()
             .expect("observation tensor should contain f32 values");
-        data.to_vec()
+        let vec = data.to_vec();
+        agent.observation_buffer.fill(0.0);
+        vec
     }
 
     #[test]
@@ -250,7 +266,7 @@ mod tests {
                 .set(layer as usize, 1, 2, layer as usize as f32 + 1.5);
         }
 
-        let observation = observation_data(&agent, position);
+        let observation = observation_data(&mut agent, position);
         let channel_size = 3 * 3;
 
         for layer in TensorLayer::ALL {
@@ -317,9 +333,9 @@ mod tests {
 
     #[test]
     fn observation_tensor_marks_out_of_bounds_cells_as_walls() {
-        let agent = test_agent([3, 3], [2, 2]);
+        let mut agent = test_agent([3, 3], [2, 2]);
 
-        let observation = observation_data(&agent, [0, 0]);
+        let observation = observation_data(&mut agent, [0, 0]);
         let wall_offset = TensorLayer::Wall as usize * 3 * 3;
 
         assert_eq!(observation.len(), TensorLayer::len() * 3 * 3);
