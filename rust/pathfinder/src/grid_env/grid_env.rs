@@ -24,7 +24,7 @@ impl GridEnv {
     }
 
     pub fn is_cell(&self, coords: [usize; 2], cell_type: CellType) -> bool {
-        *self.grid.get(Self::TENSOR_LAYER, coords[1], coords[0]) == cell_type
+        self.grid.get(Self::TENSOR_LAYER, coords[1], coords[0]) == &cell_type
     }
 
     pub fn is_valid_position(&self, position: [isize; 2]) -> bool {
