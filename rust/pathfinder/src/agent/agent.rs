@@ -8,23 +8,22 @@ use crate::tensor::Tensor;
 pub struct Agent {
     model: Model,
     window_size: [usize; 2],
-    known_env_map: Tensor<f32>,
+    known_env: Tensor<f32>,
 }
 
 impl Agent {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
-        let known_env_map =
-            Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
+        let known_env = Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
 
         Self {
             model,
             window_size,
-            known_env_map,
+            known_env,
         }
     }
 
     pub fn reset(&mut self) {
-        self.known_env_map.fill(0.0);
+        self.known_env.fill(0.0);
     }
 
     /// Extracts the local observation window tensor around the agent's position.
@@ -40,10 +39,10 @@ impl Agent {
         let half_window_width = (window_width as isize) / 2;
         let half_window_height = (window_height as isize) / 2;
 
-        let memory_width = self.known_env_map.width() as isize;
-        let memory_height = self.known_env_map.height() as isize;
+        let memory_width = self.known_env.width() as isize;
+        let memory_height = self.known_env.height() as isize;
 
-        let num_channels = self.known_env_map.channels();
+        let num_channels = self.known_env.channels();
         let mut tensor_data = Tensor::new(num_channels, window_height, window_width);
         tensor_data.fill_channel(TensorLayer::Wall as usize, 1.0);
 
@@ -69,9 +68,9 @@ impl Agent {
                     let gx_start = clip_start_x as usize;
 
                     // Source slice from global memory map
-                    let src_start = gy * self.known_env_map.width() + gx_start;
+                    let src_start = gy * self.known_env.width() + gx_start;
                     let src_slice =
-                        &self.known_env_map.channel(channel_idx)[src_start..src_start + length];
+                        &self.known_env.channel(channel_idx)[src_start..src_start + length];
 
                     // Destination slice within the target channel view
                     let dst_start = dy_local * window_width + dx_local_start;
@@ -133,12 +132,12 @@ impl Agent {
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
-        let memory_width = self.known_env_map.width() as isize;
-        let memory_height = self.known_env_map.height() as isize;
+        let memory_width = self.known_env.width() as isize;
+        let memory_height = self.known_env.height() as isize;
 
         // Mark current agent position as visited in the Visited layer
         if agent_x >= 0 && agent_x < memory_width && agent_y >= 0 && agent_y < memory_height {
-            self.known_env_map.set(
+            self.known_env.set(
                 TensorLayer::Visited as usize,
                 agent_y as usize,
                 agent_x as usize,
@@ -158,36 +157,33 @@ impl Agent {
 
                 // Update Finish layer
                 if cell_type == CellType::Finish {
-                    self.known_env_map
+                    self.known_env
                         .set(TensorLayer::Finish as usize, gy, gx, 1.0);
                 }
 
                 // Update Wall layer
                 if cell_type == CellType::Wall {
-                    self.known_env_map
-                        .set(TensorLayer::Wall as usize, gy, gx, 1.0);
+                    self.known_env.set(TensorLayer::Wall as usize, gy, gx, 1.0);
                 }
 
                 // Update Traversable layer
                 if cell_type == CellType::Empty || cell_type == CellType::Bonus {
-                    self.known_env_map
+                    self.known_env
                         .set(TensorLayer::Traversable as usize, gy, gx, 1.0);
                 }
 
                 // Update Bonus layer (respecting special -1 lock)
-                let current_bonus = *self.known_env_map.get(TensorLayer::Bonus as usize, gy, gx);
+                let current_bonus = *self.known_env.get(TensorLayer::Bonus as usize, gy, gx);
                 if current_bonus != -1.0 {
                     if cell_type == CellType::Bonus {
-                        self.known_env_map
-                            .set(TensorLayer::Bonus as usize, gy, gx, 1.0);
+                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, 1.0);
                     } else {
-                        self.known_env_map
-                            .set(TensorLayer::Bonus as usize, gy, gx, 0.0);
+                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, 0.0);
                     }
                 }
 
                 // Update Revealed layer (Fog of War)
-                self.known_env_map
+                self.known_env
                     .set(TensorLayer::Revealed as usize, gy, gx, 1.0);
             },
         );
@@ -251,10 +247,10 @@ mod tests {
 
         for layer in TensorLayer::ALL {
             agent
-                .known_env_map
+                .known_env
                 .set(layer as usize, 0, 1, layer as usize as f32 + 0.5);
             agent
-                .known_env_map
+                .known_env
                 .set(layer as usize, 1, 2, layer as usize as f32 + 1.5);
         }
 
@@ -276,7 +272,7 @@ mod tests {
 
         agent.update_memory([2, 2], &grid);
 
-        let known_map = &agent.known_env_map;
+        let known_map = &agent.known_env;
         assert_eq!(known_map.get(TensorLayer::Finish as usize, 1, 2), &1.0);
         assert_eq!(known_map.get(TensorLayer::Visited as usize, 2, 2), &1.0);
         assert_eq!(known_map.get(TensorLayer::Wall as usize, 2, 1), &1.0);
@@ -299,7 +295,7 @@ mod tests {
 
         agent.update_memory([0, 0], &grid);
 
-        let known_map = &agent.known_env_map;
+        let known_map = &agent.known_env;
         assert_eq!(known_map.get(TensorLayer::Visited as usize, 0, 0), &1.0);
         assert_eq!(known_map.get(TensorLayer::Finish as usize, 0, 0), &1.0);
         assert_eq!(known_map.get(TensorLayer::Bonus as usize, 0, 1), &1.0);
@@ -313,14 +309,12 @@ mod tests {
         let mut agent = test_agent([3, 3], [5, 5]);
         let grid = test_grid();
         agent.update_memory([2, 2], &grid);
-        agent
-            .known_env_map
-            .set(TensorLayer::Bonus as usize, 2, 2, -1.0);
+        agent.known_env.set(TensorLayer::Bonus as usize, 2, 2, -1.0);
 
         agent.update_memory([2, 2], &grid);
 
         assert_eq!(
-            agent.known_env_map.get(TensorLayer::Bonus as usize, 2, 2),
+            agent.known_env.get(TensorLayer::Bonus as usize, 2, 2),
             &-1.0
         );
     }
@@ -345,22 +339,12 @@ mod tests {
     #[test]
     fn reset_clears_known_environment_memory() {
         let mut agent = test_agent([3, 3], [4, 3]);
-        agent
-            .known_env_map
-            .set(TensorLayer::Bonus as usize, 1, 2, 1.0);
-        agent
-            .known_env_map
-            .set(TensorLayer::Wall as usize, 2, 0, 1.0);
+        agent.known_env.set(TensorLayer::Bonus as usize, 1, 2, 1.0);
+        agent.known_env.set(TensorLayer::Wall as usize, 2, 0, 1.0);
 
         agent.reset();
 
-        assert!(
-            agent
-                .known_env_map
-                .as_slice()
-                .iter()
-                .all(|&value| value == 0.0)
-        );
+        assert!(agent.known_env.as_slice().iter().all(|&value| value == 0.0));
     }
 
     #[test]
