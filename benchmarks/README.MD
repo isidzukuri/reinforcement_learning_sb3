@@ -28,27 +28,26 @@ from `python/grid_env/`.
 
 ## Export a DQN model to ONNX
 
-From the repository root, run:
+Run:
 
 ```bash
-python benchmarks/export_model_to_onnx.py
+python export_model_to_onnx.py
 ```
 
-This loads `benchmarks/dqn_cnn_model.zip` and writes a matching ONNX file to
-`benchmarks/runtime/model.onnx`.
+This loads `dqn_cnn_model.zip` and writes a matching ONNX file to
+`runtime/model.onnx`.
 
 To use a different model or custom output path:
 
 ```bash
-python benchmarks/export_model_to_onnx.py benchmarks/dqn_cnn_model.zip --output benchmarks/runtime/model.onnx
+python export_model_to_onnx.py dqn_cnn_model.zip --output runtime/model.onnx
 ```
 
 ## Run the Python pathfinder
 
-From the repository root:
 
 ```bash
-python benchmarks/run_pathfinder.py
+python run_pathfinder.py
 ```
 
 The script reads the CSV grid and ONNX model from `benchmarks/runtime/` and
@@ -56,7 +55,6 @@ prints the action count and the traversed path.
 
 ## Run the Rust pathfinder
 
-From within `benchmarks/`:
 
 ```bash
 ./pathfinder runtime/grid_output.csv runtime/model.onnx
