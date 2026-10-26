@@ -103,7 +103,8 @@ impl<T> Tensor<T> {
     /// Returns an immutable slice for a specific channel's contiguous data block.
     #[inline]
     pub fn channel(&self, channel: usize) -> &[T] {
-        &self.data[self.channel_range(channel)]
+        let range = self.channel_range(channel);
+        &self.data[self.channel_range(range)]
     }
 
     /// Fills an entire channel's memory block with a specified value.
