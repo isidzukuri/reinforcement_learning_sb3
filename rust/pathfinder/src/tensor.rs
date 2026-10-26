@@ -1,19 +1,28 @@
 #[derive(Debug)]
 pub struct Tensor<T> {
+    data: Vec<T>,
     channels: usize,
     height: usize,
     width: usize,
-    data: Vec<T>,
+    channel_size: usize,
 }
 
 impl<T: Default + Clone> Tensor<T> {
-    /// Creates a new Tensor initialized with default values for type T.
+    /// Creates a new Tensor initialized with default values.
     pub fn new(channels: usize, height: usize, width: usize) -> Self {
+        let channel_size = height
+            .checked_mul(width)
+            .expect("Height and width overflow");
+        let total_size = channels
+            .checked_mul(channel_size)
+            .expect("Tensor dimensions overflow");
+
         Self {
+            data: vec![T::default(); total_size],
             channels,
             height,
             width,
-            data: vec![T::default(); channels * height * width],
+            channel_size,
         }
     }
 }
@@ -21,16 +30,25 @@ impl<T: Default + Clone> Tensor<T> {
 impl<T> Tensor<T> {
     /// Creates a Tensor from an existing flat vector, verifying length match.
     pub fn from_vec(channels: usize, height: usize, width: usize, data: Vec<T>) -> Self {
+        let channel_size = height
+            .checked_mul(width)
+            .expect("Height and width overflow");
+        let expected_len = channels
+            .checked_mul(channel_size)
+            .expect("Tensor dimensions overflow");
+
         assert_eq!(
-            channels * height * width,
+            expected_len,
             data.len(),
             "Data length does not match tensor dimensions"
         );
+
         Self {
+            data,
             channels,
             height,
             width,
-            data,
+            channel_size,
         }
     }
 
@@ -115,15 +133,14 @@ impl<T> Tensor<T> {
     /// Computes the flat buffer index for a given (channel, row, column).
     #[inline]
     fn index(&self, channel: usize, row: usize, column: usize) -> usize {
-        channel * (self.height * self.width) + row * self.width + column
+        channel * self.channel_size + row * self.width + column
     }
 
     /// Computes the flat buffer range for a given channel.
     #[inline]
     fn channel_range(&self, channel: usize) -> std::ops::Range<usize> {
-        let channel_size = self.height * self.width;
-        let start = channel * channel_size;
-        start..start + channel_size
+        let start = channel * self.channel_size;
+        start..start + self.channel_size
     }
 }
 
@@ -149,6 +166,30 @@ mod tests {
     #[should_panic(expected = "Data length does not match tensor dimensions")]
     fn test_tensor_from_vec_mismatch_panics() {
         let _tensor: Tensor<u8> = Tensor::from_vec(2, 2, 2, vec![1, 2, 3]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Height and width overflow")]
+    fn test_tensor_new_panics_on_height_width_overflow() {
+        let _tensor: Tensor<u8> = Tensor::new(1, usize::MAX, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Tensor dimensions overflow")]
+    fn test_tensor_new_panics_on_channel_overflow() {
+        let _tensor: Tensor<u8> = Tensor::new(usize::MAX, 2, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Height and width overflow")]
+    fn test_tensor_from_vec_panics_on_height_width_overflow() {
+        let _tensor: Tensor<u8> = Tensor::from_vec(1, usize::MAX, 2, vec![]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Tensor dimensions overflow")]
+    fn test_tensor_from_vec_panics_on_channel_overflow() {
+        let _tensor: Tensor<u8> = Tensor::from_vec(usize::MAX, 2, 2, vec![0]);
     }
 
     #[test]
