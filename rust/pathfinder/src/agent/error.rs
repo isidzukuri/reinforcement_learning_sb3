@@ -18,10 +18,10 @@ impl fmt::Display for AgentError {
             Self::MissingModelOutput => f.write_str("model returned no outputs"),
             Self::NoValidActionValues => {
                 f.write_str("model output tensor contains no valid action values")
-            },
+            }
             Self::InvalidActionIndex(index) => {
                 write!(f, "model output action index {index} is out of bounds")
-            },
+            }
             Self::ObservationTensor(error) => {
                 write!(f, "failed to create observation tensor: {error}")
             }
@@ -61,7 +61,10 @@ mod tests {
         assert!(error.source().is_some());
 
         let error = AgentError::OutputTensor(ort::Error::new("output tensor issue"));
-        assert_eq!(error.to_string(), "failed to read model output: output tensor issue");
+        assert_eq!(
+            error.to_string(),
+            "failed to read model output: output tensor issue"
+        );
         assert!(error.source().is_some());
     }
 
@@ -79,7 +82,10 @@ mod tests {
         assert!(error.source().is_none());
 
         let error = AgentError::InvalidActionIndex(7);
-        assert_eq!(error.to_string(), "model output action index 7 is out of bounds");
+        assert_eq!(
+            error.to_string(),
+            "model output action index 7 is out of bounds"
+        );
         assert!(error.source().is_none());
     }
 }

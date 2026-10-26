@@ -79,7 +79,7 @@ impl<T> Tensor<T> {
     pub fn into_vec(self) -> Vec<T> {
         self.data
     }
-    
+
     /// Returns a mutable slice for a specific channel's contiguous data block.
     #[inline]
     pub fn channel_mut(&mut self, channel: usize) -> &mut [T] {

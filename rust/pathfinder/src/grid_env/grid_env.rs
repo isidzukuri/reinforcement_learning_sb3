@@ -37,9 +37,7 @@ impl GridEnv {
         let x = x as usize;
         let y = y as usize;
 
-        x < self.width
-            && y < self.height
-            && !self.is_cell([x, y], CellType::Wall)
+        x < self.width && y < self.height && !self.is_cell([x, y], CellType::Wall)
     }
 
     pub fn for_each_in_window<F>(&self, coords: [usize; 2], window: [usize; 2], mut fnc: F)
@@ -152,7 +150,6 @@ mod tests {
             ]
         );
     }
-
 
     #[test]
     fn is_cell_checks_the_cell_type_at_coordinates() {

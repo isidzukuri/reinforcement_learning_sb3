@@ -40,7 +40,10 @@ mod tests {
         assert!(error.source().is_some());
 
         let error = ModelLoaderError::LoadModel(ort::Error::new("load model failed"));
-        assert_eq!(error.to_string(), "failed to load ONNX model: load model failed");
+        assert_eq!(
+            error.to_string(),
+            "failed to load ONNX model: load model failed"
+        );
         assert!(error.source().is_some());
     }
 }

@@ -2,8 +2,8 @@ mod error;
 
 pub use error::ModelLoaderError;
 
-use std::path::Path;
 use ort::session::Session;
+use std::path::Path;
 
 pub fn call(file_path: impl AsRef<Path>) -> Result<Session, ModelLoaderError> {
     let builder = Session::builder().map_err(ModelLoaderError::SessionBuilder)?;
