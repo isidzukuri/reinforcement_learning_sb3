@@ -137,15 +137,17 @@ impl CsvLoader {
     fn parse_data_line(line: &str) -> Result<Option<Vec<CellType>>, CsvLoaderError> {
         let row = line
             .split(',')
-            .map(|value| {
-                let value = value.trim();
-                value
-                    .parse::<CellType>()
-                    .map_err(|_| CsvLoaderError::InvalidCellType(value.to_owned()))
-            })
+            .map(Self::parse_cell)
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(if row.is_empty() { None } else { Some(row) })
+        Ok(Some(row))
+    }
+
+    fn parse_cell(value: &str) -> Result<CellType, CsvLoaderError> {
+        let value = value.trim();
+        value
+            .parse::<CellType>()
+            .map_err(|_| CsvLoaderError::InvalidCellType(value.to_owned()))
     }
 }
 
