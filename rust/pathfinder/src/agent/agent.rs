@@ -63,7 +63,7 @@ impl Agent {
                 let clip_start_x = start_grid_x.max(0);
                 let clip_end_x = end_grid_x.min(memory_width - 1);
 
-                if clip_start_x <= clip_end_x {
+                if clip_start_x > clip_end_x {
                     let length = (clip_end_x - clip_start_x + 1) as usize;
                     let dx_local_start = (clip_start_x - start_grid_x) as usize;
                     let gx_start = clip_start_x as usize;
