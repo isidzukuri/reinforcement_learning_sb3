@@ -40,6 +40,13 @@ impl<T> Tensor<T> {
         channel * (self.height * self.width) + row * self.width + column
     }
 
+    #[inline]
+    fn channel_range(&self, channel: usize) -> std::ops::Range<usize> {
+        let channel_size = self.height * self.width;
+        let start = channel * channel_size;
+        start..start + channel_size
+    }
+
     /// Gets an immutable reference to a cell at (channel, row, column).
     #[inline]
     pub fn get(&self, channel: usize, row: usize, column: usize) -> &T {
@@ -89,17 +96,14 @@ impl<T> Tensor<T> {
     /// Returns a mutable slice for a specific channel's contiguous data block.
     #[inline]
     pub fn channel_mut(&mut self, channel: usize) -> &mut [T] {
-        let channel_size = self.height * self.width;
-        let start = channel * channel_size;
-        &mut self.data[start..start + channel_size]
+        let range = self.channel_range(channel);
+        &mut self.data[range]
     }
 
     /// Returns an immutable slice for a specific channel's contiguous data block.
     #[inline]
     pub fn channel(&self, channel: usize) -> &[T] {
-        let channel_size = self.height * self.width;
-        let start = channel * channel_size;
-        &self.data[start..start + channel_size]
+        &self.data[self.channel_range(channel)]
     }
 
     /// Fills an entire channel's memory block with a specified value.
