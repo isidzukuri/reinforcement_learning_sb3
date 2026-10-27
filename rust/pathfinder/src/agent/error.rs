@@ -8,6 +8,7 @@ pub enum AgentError {
     NoValidActionValues,
     InvalidActionIndex(usize),
     ObservationTensor(ort::Error),
+    ModelDataType(ort::Error),
 }
 
 impl fmt::Display for AgentError {
@@ -25,6 +26,9 @@ impl fmt::Display for AgentError {
             Self::ObservationTensor(error) => {
                 write!(f, "failed to create observation tensor: {error}")
             }
+            Self::ModelDataType(error) => {
+                write!(f, "failed to create instance of Agent: {error}")
+            }
         }
     }
 }
@@ -32,9 +36,10 @@ impl fmt::Display for AgentError {
 impl std::error::Error for AgentError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::ObservationTensor(error) | Self::Inference(error) | Self::OutputTensor(error) => {
-                Some(error)
-            }
+            Self::ObservationTensor(error)
+            | Self::Inference(error)
+            | Self::OutputTensor(error)
+            | Self::ModelDataType(error) => Some(error),
             Self::MissingModelOutput | Self::NoValidActionValues | Self::InvalidActionIndex(_) => {
                 None
             }

@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::agent::AgentError;
 use crate::grid_env::CsvLoaderError;
-use crate::model_loader::ModelLoaderError;
+use crate::model::ModelLoaderError;
 
 #[derive(Debug)]
 pub enum RunnerError {

@@ -1,16 +1,16 @@
 use super::{RunnerError, Solution};
-use crate::agent::Agent;
+use crate::agent::DynAgent;
 use crate::grid_env::{CellType, GridEnv};
 
 pub struct Runner {
     pub grid_env: GridEnv,
-    agent: Agent,
+    agent: DynAgent,
 }
 
 impl Runner {
     const ACTIONS_LIMIT: usize = 2000;
 
-    pub fn new(grid_env: GridEnv, agent: Agent) -> Self {
+    pub fn new(grid_env: GridEnv, agent: DynAgent) -> Self {
         Self { grid_env, agent }
     }
 
@@ -27,8 +27,24 @@ impl Runner {
             }
 
             solution.timesteps += 1;
-            self.agent.update_memory(agent_pos, &self.grid_env);
-            let action = self.agent.select_action(agent_pos)?;
+            let action = match &mut self.agent {
+                DynAgent::Float32(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+                DynAgent::Int32(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+                DynAgent::Float64(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+                DynAgent::Int64(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+            };
             let [dx, dy] = action.delta();
             let next_pos = [agent_pos[0] as isize + dx, agent_pos[1] as isize + dy];
 
@@ -46,16 +62,19 @@ impl Runner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model_loader;
+    use crate::model;
     use std::path::PathBuf;
 
     fn test_runner(start: [usize; 2], cell: CellType) -> Runner {
         let model_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
-        let model = model_loader::call(model_path).expect("repository ONNX model should load");
+        let (dtype, model) =
+            model::Loader::call(model_path).expect("repository ONNX model should load");
         let mut grid_env = GridEnv::new(1, 1);
         grid_env.start = start;
         grid_env.grid.set(0, 0, 0, cell);
-        let agent = Agent::new(model, [5, 5], [grid_env.width, grid_env.height]);
+        let agent =
+            crate::agent::new_by_type(dtype, model, [5, 5], [grid_env.width, grid_env.height])
+                .expect("model input type should be supported");
 
         Runner::new(grid_env, agent)
     }

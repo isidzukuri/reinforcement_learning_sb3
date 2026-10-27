@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 ort = { version = "=2.0.0-rc.10", features = ["ndarray"] }
+num-traits = "0.2"
