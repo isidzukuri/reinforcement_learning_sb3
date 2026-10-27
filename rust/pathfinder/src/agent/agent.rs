@@ -3,16 +3,17 @@ use ort::value::TensorRef;
 
 use super::{AgentError, TensorLayer};
 use crate::grid_env::{Action, CellType, GridEnv};
+use crate::model::ModelScalar;
 use crate::tensor::Tensor;
 
-pub struct Agent {
+pub struct Agent<T> {
     model: Model,
     window_size: [usize; 2],
-    known_env: Tensor<f32>,
-    observation_buffer: Tensor<f32>,
+    known_env: Tensor<T>,
+    observation_buffer: Tensor<T>,
 }
 
-impl Agent {
+impl<T: ModelScalar> Agent<T> {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
         let known_env = Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
         let observation_buffer = Tensor::new(TensorLayer::len(), window_size[1], window_size[0]);
@@ -27,7 +28,7 @@ impl Agent {
 
     /// Resets the agent's memory of the environment
     pub fn reset(&mut self) {
-        self.known_env.fill(0.0);
+        self.known_env.fill(T::zero());
     }
 
     /// Updates the agent's memory directly from the GridEnv.
@@ -44,7 +45,7 @@ impl Agent {
                 TensorLayer::Visited as usize,
                 agent_y as usize,
                 agent_x as usize,
-                1.0,
+                T::one(),
             );
         }
 
@@ -61,33 +62,33 @@ impl Agent {
                 // Update Finish layer
                 if cell_type == CellType::Finish {
                     self.known_env
-                        .set(TensorLayer::Finish as usize, gy, gx, 1.0);
+                        .set(TensorLayer::Finish as usize, gy, gx, T::one());
                 }
 
                 // Update Wall layer
                 if cell_type == CellType::Wall {
-                    self.known_env.set(TensorLayer::Wall as usize, gy, gx, 1.0);
+                    self.known_env.set(TensorLayer::Wall as usize, gy, gx, T::one());
                 }
 
                 // Update Traversable layer
                 if cell_type == CellType::Empty || cell_type == CellType::Bonus {
                     self.known_env
-                        .set(TensorLayer::Traversable as usize, gy, gx, 1.0);
+                        .set(TensorLayer::Traversable as usize, gy, gx, T::one());
                 }
 
                 // Update Bonus layer (respecting special -1 lock)
                 let current_bonus = *self.known_env.get(TensorLayer::Bonus as usize, gy, gx);
-                if current_bonus != -1.0 {
+                if current_bonus != T::minus_one() {
                     if cell_type == CellType::Bonus {
-                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, 1.0);
+                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, T::one());
                     } else {
-                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, 0.0);
+                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, T::zero());
                     }
                 }
 
                 // Update Revealed layer (Fog of War)
                 self.known_env
-                    .set(TensorLayer::Revealed as usize, gy, gx, 1.0);
+                    .set(TensorLayer::Revealed as usize, gy, gx, T::one());
             },
         );
     }
@@ -117,8 +118,9 @@ impl Agent {
             .values()
             .next()
             .ok_or(AgentError::MissingModelOutput)?;
+        
         let (_shape, data) = output
-            .try_extract_tensor::<f32>()
+            .try_extract_tensor::<T>()
             .map_err(AgentError::OutputTensor)?;
 
         let action = Self::action_from_output(data)?;
@@ -126,11 +128,10 @@ impl Agent {
         Ok(action)
     }
 
-    fn action_from_output(data: &[f32]) -> Result<Action, AgentError> {
+    fn action_from_output(data: &[T]) -> Result<Action, AgentError> {
         let action_index = data
             .iter()
             .enumerate()
-            .filter(|&(_, &v)| !v.is_nan())
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(idx, _)| idx)
             .ok_or(AgentError::NoValidActionValues)?;
@@ -145,7 +146,7 @@ impl Agent {
 
     /// Fills the local observation window buffer around the agent's position.
     fn fill_observation_buffer(&mut self, agent_pos: [usize; 2]) {
-        self.observation_buffer.fill(0.0);
+        self.observation_buffer.fill(T::zero());
         
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
@@ -159,7 +160,7 @@ impl Agent {
         let memory_height = self.known_env.height() as isize;
 
         let num_channels = self.known_env.channels();
-        self.observation_buffer.fill_channel(TensorLayer::Wall as usize, 1.0);
+        self.observation_buffer.fill_channel(TensorLayer::Wall as usize, T::one());
 
         let start_grid_x = agent_x - half_window_width;
         let end_grid_x = start_grid_x + (window_width as isize) - 1;
@@ -197,12 +198,12 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model_loader::call;
+    use crate::model;
     use std::path::Path;
 
     fn test_agent(window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Agent {
         let model_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
-        let model = call(model_path).expect("repository ONNX model should load");
+        let model = model::Loader::call(model_path).expect("repository ONNX model should load");
         Agent::new(model, window_size, memory_grid_size)
     }
 

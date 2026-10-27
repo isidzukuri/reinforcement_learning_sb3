@@ -1,16 +1,17 @@
 use super::{RunnerError, Solution};
 use crate::agent::Agent;
 use crate::grid_env::{CellType, GridEnv};
+use crate::model::ModelScalar;
 
-pub struct Runner {
+pub struct Runner<T> {
     pub grid_env: GridEnv,
-    agent: Agent,
+    agent:  Agent<T>,
 }
 
-impl Runner {
+impl <T: ModelScalar> Runner<T> {
     const ACTIONS_LIMIT: usize = 2000;
 
-    pub fn new(grid_env: GridEnv, agent: Agent) -> Self {
+    pub fn new(grid_env: GridEnv, agent: Agent<T>) -> Self {
         Self { grid_env, agent }
     }
 
@@ -46,12 +47,12 @@ impl Runner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model_loader;
+    use crate::model;
     use std::path::PathBuf;
 
     fn test_runner(start: [usize; 2], cell: CellType) -> Runner {
         let model_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
-        let model = model_loader::call(model_path).expect("repository ONNX model should load");
+        let model = model::Loader::call(model_path).expect("repository ONNX model should load");
         let mut grid_env = GridEnv::new(1, 1);
         grid_env.start = start;
         grid_env.grid.set(0, 0, 0, cell);

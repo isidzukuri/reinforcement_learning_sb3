@@ -1,15 +1,18 @@
-mod error;
-
-pub use error::ModelLoaderError;
+pub use super::error::ModelLoaderError;
 
 use ort::session::Session;
 use std::path::Path;
 
-pub fn call(file_path: impl AsRef<Path>) -> Result<Session, ModelLoaderError> {
-    let builder = Session::builder().map_err(ModelLoaderError::SessionBuilder)?;
-    builder
-        .commit_from_file(file_path.as_ref())
-        .map_err(ModelLoaderError::LoadModel)
+pub struct Loader;
+
+
+impl Loader {
+    pub fn call(file_path: impl AsRef<Path>) -> Result<Session, ModelLoaderError> {
+        let builder = Session::builder().map_err(ModelLoaderError::SessionBuilder)?;
+        builder
+            .commit_from_file(file_path.as_ref())
+            .map_err(ModelLoaderError::LoadModel)
+    }
 }
 
 #[cfg(test)]
@@ -31,7 +34,7 @@ mod tests {
     fn call_returns_error_for_missing_file() {
         let path = unique_temp_path("missing_model");
 
-        let result = call(&path);
+        let result = Loader::call(&path);
 
         assert!(
             matches!(result, Err(ModelLoaderError::LoadModel(_))),
@@ -44,7 +47,7 @@ mod tests {
         let path = unique_temp_path("invalid_model");
         fs::write(&path, b"not an onnx model").unwrap();
 
-        let result = call(&path);
+        let result = Loader::call(&path);
 
         assert!(
             matches!(result, Err(ModelLoaderError::LoadModel(_))),
