@@ -6,9 +6,14 @@ use ort::session::Session;
 use std::path::Path;
 
 pub fn call(file_path: impl AsRef<Path>) -> Result<Session, ModelLoaderError> {
+    let model_bytes = std::fs::read(file_path).map_err(ModelLoaderError::Io)?;
+    from_bytes(&model_bytes)
+}
+
+pub fn from_bytes(model_bytes: &[u8]) -> Result<Session, ModelLoaderError> {
     let builder = Session::builder().map_err(ModelLoaderError::SessionBuilder)?;
     builder
-        .commit_from_file(file_path.as_ref())
+        .commit_from_memory(model_bytes)
         .map_err(ModelLoaderError::LoadModel)
 }
 
@@ -34,8 +39,8 @@ mod tests {
         let result = call(&path);
 
         assert!(
-            matches!(result, Err(ModelLoaderError::LoadModel(_))),
-            "expected a missing ONNX model to fail while loading"
+            matches!(result, Err(ModelLoaderError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound),
+            "expected a missing ONNX model to fail while reading the file"
         );
     }
 
@@ -51,5 +56,15 @@ mod tests {
             "expected an invalid ONNX payload to fail while loading"
         );
         fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn from_bytes_returns_error_for_invalid_onnx_payload() {
+        let result = from_bytes(b"not an onnx model");
+
+        assert!(
+            matches!(result, Err(ModelLoaderError::LoadModel(_))),
+            "expected an invalid in-memory ONNX payload to fail while loading"
+        );
     }
 }

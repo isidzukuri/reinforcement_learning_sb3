@@ -1,18 +1,21 @@
 use std::fmt;
+use std::io;
 
 #[derive(Debug)]
 pub enum ModelLoaderError {
     SessionBuilder(ort::Error),
     LoadModel(ort::Error),
+    Io(io::Error),
 }
 
 impl fmt::Display for ModelLoaderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::LoadModel(error) => write!(f, "failed to load ONNX model: {error}"),
+            Self::Io(error) => write!(f, "failed to read ONNX file: {error}"),
             Self::SessionBuilder(error) => {
                 write!(f, "failed to create ONNX session builder: {error}")
             }
-            Self::LoadModel(error) => write!(f, "failed to load ONNX model: {error}"),
         }
     }
 }
@@ -20,7 +23,9 @@ impl fmt::Display for ModelLoaderError {
 impl std::error::Error for ModelLoaderError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::SessionBuilder(error) | Self::LoadModel(error) => Some(error),
+            Self::SessionBuilder(error) => Some(error),
+            Self::LoadModel(error) => Some(error),
+            Self::Io(error) => Some(error),
         }
     }
 }
@@ -31,19 +36,44 @@ mod tests {
     use std::error::Error as _;
 
     #[test]
-    fn model_loader_errors_report_display_and_source() {
-        let error = ModelLoaderError::SessionBuilder(ort::Error::new("session builder failed"));
-        assert_eq!(
-            error.to_string(),
-            "failed to create ONNX session builder: session builder failed"
-        );
-        assert!(error.source().is_some());
+    fn test_session_builder_error_display_and_source() {
+        let ort_err = ort::Error::new("failed to initialize environment");
+        let error = ModelLoaderError::SessionBuilder(ort_err);
 
-        let error = ModelLoaderError::LoadModel(ort::Error::new("load model failed"));
         assert_eq!(
             error.to_string(),
-            "failed to load ONNX model: load model failed"
+            "failed to create ONNX session builder: failed to initialize environment"
         );
-        assert!(error.source().is_some());
+
+        let source = error.source().expect("expected a source error");
+        assert_eq!(source.to_string(), "failed to initialize environment");
+    }
+
+    #[test]
+    fn test_load_model_error_display_and_source() {
+        let ort_err = ort::Error::new("corrupted model weights");
+        let error = ModelLoaderError::LoadModel(ort_err);
+
+        assert_eq!(
+            error.to_string(),
+            "failed to load ONNX model: corrupted model weights"
+        );
+
+        let source = error.source().expect("expected a source error");
+        assert_eq!(source.to_string(), "corrupted model weights");
+    }
+
+    #[test]
+    fn test_io_error_display_and_source() {
+        let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let error = ModelLoaderError::Io(io_err);
+
+        assert_eq!(
+            error.to_string(),
+            "failed to read ONNX file: file not found"
+        );
+
+        let source = error.source().expect("expected a source error");
+        assert_eq!(source.to_string(), "file not found");
     }
 }
