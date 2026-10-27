@@ -146,7 +146,7 @@ impl Agent {
     /// Fills the local observation window buffer around the agent's position.
     fn fill_observation_buffer(&mut self, agent_pos: [usize; 2]) {
         self.observation_buffer.fill(0.0);
-        
+
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
@@ -159,7 +159,8 @@ impl Agent {
         let memory_height = self.known_env.height() as isize;
 
         let num_channels = self.known_env.channels();
-        self.observation_buffer.fill_channel(TensorLayer::Wall as usize, 1.0);
+        self.observation_buffer
+            .fill_channel(TensorLayer::Wall as usize, 1.0);
 
         let start_grid_x = agent_x - half_window_width;
         let end_grid_x = start_grid_x + (window_width as isize) - 1;
@@ -185,8 +186,8 @@ impl Agent {
 
             for channel_idx in 0..num_channels {
                 let src_slice = &self.known_env.channel(channel_idx)[src_start..src_start + length];
-                let dst_slice =
-                    &mut self.observation_buffer.channel_mut(channel_idx)[dst_start..dst_start + length];
+                let dst_slice = &mut self.observation_buffer.channel_mut(channel_idx)
+                    [dst_start..dst_start + length];
 
                 dst_slice.copy_from_slice(src_slice);
             }
