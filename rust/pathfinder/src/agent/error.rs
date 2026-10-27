@@ -3,6 +3,7 @@ use std::fmt;
 #[derive(Debug)]
 pub enum AgentError {
     Inference(ort::Error),
+    ModelLock(String),
     OutputTensor(ort::Error),
     MissingModelOutput,
     NoValidActionValues,
@@ -14,6 +15,7 @@ impl fmt::Display for AgentError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Inference(error) => write!(f, "model inference failed: {error}"),
+            Self::ModelLock(error) => write!(f, "failed to lock model session: {error}"),
             Self::OutputTensor(error) => write!(f, "failed to read model output: {error}"),
             Self::MissingModelOutput => f.write_str("model returned no outputs"),
             Self::NoValidActionValues => {
@@ -35,9 +37,10 @@ impl std::error::Error for AgentError {
             Self::ObservationTensor(error) | Self::Inference(error) | Self::OutputTensor(error) => {
                 Some(error)
             }
-            Self::MissingModelOutput | Self::NoValidActionValues | Self::InvalidActionIndex(_) => {
-                None
-            }
+            Self::ModelLock(_)
+            | Self::MissingModelOutput
+            | Self::NoValidActionValues
+            | Self::InvalidActionIndex(_) => None,
         }
     }
 }

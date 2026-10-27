@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use ort::session::Session as Model;
 use ort::value::TensorRef;
 
@@ -6,14 +8,24 @@ use crate::grid_env::{Action, CellType, GridEnv};
 use crate::tensor::Tensor;
 
 pub struct Agent {
-    model: Model,
+    model: SharedModel,
     window_size: [usize; 2],
     known_env: Tensor<f32>,
     observation_buffer: Tensor<f32>,
 }
 
+pub type SharedModel = Arc<Mutex<Model>>;
+
 impl Agent {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
+        Self::new_with_shared_model(Arc::new(Mutex::new(model)), window_size, memory_grid_size)
+    }
+
+    pub fn new_with_shared_model(
+        model: SharedModel,
+        window_size: [usize; 2],
+        memory_grid_size: [usize; 2],
+    ) -> Self {
         let known_env = Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
         let observation_buffer = Tensor::new(TensorLayer::len(), window_size[1], window_size[0]);
 
@@ -108,8 +120,11 @@ impl Agent {
         let tensor_ref = TensorRef::from_array_view((shape, self.observation_buffer.as_slice()))
             .map_err(AgentError::ObservationTensor)?;
 
-        let outputs = self
+        let mut model = self
             .model
+            .lock()
+            .map_err(|error| AgentError::ModelLock(error.to_string()))?;
+        let outputs = model
             .run(ort::inputs![tensor_ref])
             .map_err(AgentError::Inference)?;
 

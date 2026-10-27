@@ -17,6 +17,18 @@ pub fn from_bytes(model_bytes: &[u8]) -> Result<Session, ModelLoaderError> {
         .map_err(ModelLoaderError::LoadModel)
 }
 
+pub fn from_bytes_with_intra_threads(
+    model_bytes: &[u8],
+    num_threads: usize,
+) -> Result<Session, ModelLoaderError> {
+    let builder = Session::builder()
+        .and_then(|builder| builder.with_intra_threads(num_threads))
+        .map_err(ModelLoaderError::SessionBuilder)?;
+    builder
+        .commit_from_memory(model_bytes)
+        .map_err(ModelLoaderError::LoadModel)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

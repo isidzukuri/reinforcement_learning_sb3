@@ -11,6 +11,11 @@ cargo run --manifest-path Cargo.toml
 By default it listens on `0.0.0.0:3005` and loads the `model.onnx` file beside
 the service crate. Configure `PATHFINDER_ADDR` and `PATHFINDER_MODEL_PATH` to
 override those values.
+At startup the service reads the model once and creates a bounded session pool.
+`PATHFINDER_SESSION_POOL_SIZE` sets the number of sessions; by default it uses
+the number of available CPU cores. Each session uses one intra-op thread.
+Requests receive HTTP 503 while every session is busy, rather than waiting in
+an unbounded inference queue.
 
 The build context must include both Rust crates because the service depends on
 the sibling `pathfinder` crate. From this `pathfinder_service` directory, build
