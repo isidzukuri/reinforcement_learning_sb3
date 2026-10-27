@@ -1,22 +1,13 @@
+use num_traits::Signed;
+use ort::tensor::PrimitiveTensorElementType;
 use std::fmt::Debug;
-use num_traits;
 
 pub trait ModelScalar:
-    Copy
-    + Debug
-    + Default
-    + PartialOrd
-    + num_traits::Signed
-    + for<'a> TryFrom<&'a ort::value::DynValue, Error = ort::Error>
+    Copy + Debug + Default + PartialOrd + Signed + PrimitiveTensorElementType + 'static
 {
 }
 
 impl<T> ModelScalar for T where
-    T: Copy
-        + Debug
-        + Default
-        + PartialOrd
-        + num_traits::Signed
-        + for<'a> TryFrom<&'a ort::value::DynValue, Error = ort::Error>
+    T: Copy + Debug + Default + PartialOrd + Signed + PrimitiveTensorElementType + 'static
 {
 }

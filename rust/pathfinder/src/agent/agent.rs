@@ -6,14 +6,50 @@ use crate::grid_env::{Action, CellType, GridEnv};
 use crate::model::ModelScalar;
 use crate::tensor::Tensor;
 
-pub struct Agent<T> {
-    model: Model,
-    window_size: [usize; 2],
-    known_env: Tensor<T>,
-    observation_buffer: Tensor<T>,
+pub struct AgentInner<T> {
+    pub model: Model,
+    pub window_size: [usize; 2],
+    pub known_env: Tensor<T>,
+    pub observation_buffer: Tensor<T>,
 }
 
-impl<T: ModelScalar> Agent<T> {
+pub enum Agent {
+    Float32(AgentInner<f32>),
+    Int32(AgentInner<i32>),
+    Float64(AgentInner<f64>),
+    Int64(AgentInner<i64>),
+}
+
+impl Agent {
+    pub fn reset(&mut self) {
+        match self {
+            Self::Float32(agent) => agent.reset(),
+            Self::Int32(agent) => agent.reset(),
+            Self::Float64(agent) => agent.reset(),
+            Self::Int64(agent) => agent.reset(),
+        }
+    }
+
+    pub fn update_memory(&mut self, agent_pos: [usize; 2], grid_env: &GridEnv) {
+        match self {
+            Self::Float32(agent) => agent.update_memory(agent_pos, grid_env),
+            Self::Int32(agent) => agent.update_memory(agent_pos, grid_env),
+            Self::Float64(agent) => agent.update_memory(agent_pos, grid_env),
+            Self::Int64(agent) => agent.update_memory(agent_pos, grid_env),
+        }
+    }
+
+    pub fn select_action(&mut self, agent_pos: [usize; 2]) -> Result<Action, AgentError> {
+        match self {
+            Self::Float32(agent) => agent.select_action(agent_pos),
+            Self::Int32(agent) => agent.select_action(agent_pos),
+            Self::Float64(agent) => agent.select_action(agent_pos),
+            Self::Int64(agent) => agent.select_action(agent_pos),
+        }
+    }
+}
+
+impl<T: ModelScalar> AgentInner<T> {
     pub fn new(model: Model, window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Self {
         let known_env = Tensor::new(TensorLayer::len(), memory_grid_size[1], memory_grid_size[0]);
         let observation_buffer = Tensor::new(TensorLayer::len(), window_size[1], window_size[0]);
@@ -67,7 +103,8 @@ impl<T: ModelScalar> Agent<T> {
 
                 // Update Wall layer
                 if cell_type == CellType::Wall {
-                    self.known_env.set(TensorLayer::Wall as usize, gy, gx, T::one());
+                    self.known_env
+                        .set(TensorLayer::Wall as usize, gy, gx, T::one());
                 }
 
                 // Update Traversable layer
@@ -78,11 +115,13 @@ impl<T: ModelScalar> Agent<T> {
 
                 // Update Bonus layer (respecting special -1 lock)
                 let current_bonus = *self.known_env.get(TensorLayer::Bonus as usize, gy, gx);
-                if current_bonus != T::minus_one() {
+                if current_bonus != -T::one() {
                     if cell_type == CellType::Bonus {
-                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, T::one());
+                        self.known_env
+                            .set(TensorLayer::Bonus as usize, gy, gx, T::one());
                     } else {
-                        self.known_env.set(TensorLayer::Bonus as usize, gy, gx, T::zero());
+                        self.known_env
+                            .set(TensorLayer::Bonus as usize, gy, gx, T::zero());
                     }
                 }
 
@@ -118,7 +157,7 @@ impl<T: ModelScalar> Agent<T> {
             .values()
             .next()
             .ok_or(AgentError::MissingModelOutput)?;
-        
+
         let (_shape, data) = output
             .try_extract_tensor::<T>()
             .map_err(AgentError::OutputTensor)?;
@@ -132,6 +171,7 @@ impl<T: ModelScalar> Agent<T> {
         let action_index = data
             .iter()
             .enumerate()
+            .filter(|(_, value)| value.partial_cmp(value).is_some())
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(idx, _)| idx)
             .ok_or(AgentError::NoValidActionValues)?;
@@ -147,7 +187,7 @@ impl<T: ModelScalar> Agent<T> {
     /// Fills the local observation window buffer around the agent's position.
     fn fill_observation_buffer(&mut self, agent_pos: [usize; 2]) {
         self.observation_buffer.fill(T::zero());
-        
+
         let agent_x = agent_pos[0] as isize;
         let agent_y = agent_pos[1] as isize;
 
@@ -160,7 +200,8 @@ impl<T: ModelScalar> Agent<T> {
         let memory_height = self.known_env.height() as isize;
 
         let num_channels = self.known_env.channels();
-        self.observation_buffer.fill_channel(TensorLayer::Wall as usize, T::one());
+        self.observation_buffer
+            .fill_channel(TensorLayer::Wall as usize, T::one());
 
         let start_grid_x = agent_x - half_window_width;
         let end_grid_x = start_grid_x + (window_width as isize) - 1;
@@ -186,8 +227,8 @@ impl<T: ModelScalar> Agent<T> {
 
             for channel_idx in 0..num_channels {
                 let src_slice = &self.known_env.channel(channel_idx)[src_start..src_start + length];
-                let dst_slice =
-                    &mut self.observation_buffer.channel_mut(channel_idx)[dst_start..dst_start + length];
+                let dst_slice = &mut self.observation_buffer.channel_mut(channel_idx)
+                    [dst_start..dst_start + length];
 
                 dst_slice.copy_from_slice(src_slice);
             }
@@ -201,10 +242,11 @@ mod tests {
     use crate::model;
     use std::path::Path;
 
-    fn test_agent(window_size: [usize; 2], memory_grid_size: [usize; 2]) -> Agent {
+    fn test_agent(window_size: [usize; 2], memory_grid_size: [usize; 2]) -> AgentInner<f32> {
         let model_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
-        let model = model::Loader::call(model_path).expect("repository ONNX model should load");
-        Agent::new(model, window_size, memory_grid_size)
+        let (_, model) =
+            model::Loader::call(model_path).expect("repository ONNX model should load");
+        AgentInner::new(model, window_size, memory_grid_size)
     }
 
     fn test_grid() -> GridEnv {
@@ -226,7 +268,7 @@ mod tests {
         grid
     }
 
-    fn observation_data(agent: &mut Agent, position: [usize; 2]) -> Vec<f32> {
+    fn observation_data(agent: &mut AgentInner<f32>, position: [usize; 2]) -> Vec<f32> {
         agent.fill_observation_buffer(position);
         let shape = [
             1,
@@ -363,11 +405,11 @@ mod tests {
     #[test]
     fn action_from_output_returns_error_when_values_are_empty_or_nan() {
         assert!(matches!(
-            Agent::action_from_output(&[]),
+            AgentInner::<f32>::action_from_output(&[]),
             Err(AgentError::NoValidActionValues)
         ));
         assert!(matches!(
-            Agent::action_from_output(&[f32::NAN, f32::NAN]),
+            AgentInner::<f32>::action_from_output(&[f32::NAN, f32::NAN]),
             Err(AgentError::NoValidActionValues)
         ));
     }
@@ -379,8 +421,16 @@ mod tests {
         *output.last_mut().unwrap() = 1.0;
 
         assert!(matches!(
-            Agent::action_from_output(&output),
+            AgentInner::<f32>::action_from_output(&output),
             Err(AgentError::InvalidActionIndex(index)) if index == Action::ALL.len()
         ));
+    }
+
+    #[test]
+    fn action_from_output_supports_an_alternate_model_scalar() {
+        assert_eq!(
+            AgentInner::<f64>::action_from_output(&[0.0, 0.0, 1.0, 0.0]).unwrap(),
+            Action::Left
+        );
     }
 }

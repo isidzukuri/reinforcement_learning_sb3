@@ -1,17 +1,35 @@
 pub use super::error::ModelLoaderError;
 
 use ort::session::Session;
+use ort::tensor::TensorElementType;
+use ort::value::ValueType;
 use std::path::Path;
 
 pub struct Loader;
 
-
 impl Loader {
-    pub fn call(file_path: impl AsRef<Path>) -> Result<Session, ModelLoaderError> {
+    pub fn call(
+        file_path: impl AsRef<Path>,
+    ) -> Result<(TensorElementType, Session), ModelLoaderError> {
         let builder = Session::builder().map_err(ModelLoaderError::SessionBuilder)?;
-        builder
+        let session = builder
             .commit_from_file(file_path.as_ref())
-            .map_err(ModelLoaderError::LoadModel)
+            .map_err(ModelLoaderError::LoadModel)?;
+
+        let input = session
+            .inputs
+            .first()
+            .ok_or_else(|| ModelLoaderError::LoadModel(ort::Error::new("model has no inputs")))?;
+        let dtype = match &input.input_type {
+            ValueType::Tensor { ty, .. } => *ty,
+            _ => {
+                return Err(ModelLoaderError::LoadModel(ort::Error::new(
+                    "model input is not a tensor",
+                )));
+            }
+        };
+
+        Ok((dtype, session))
     }
 }
 

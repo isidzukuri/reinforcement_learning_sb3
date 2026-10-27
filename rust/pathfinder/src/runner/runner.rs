@@ -1,17 +1,16 @@
 use super::{RunnerError, Solution};
 use crate::agent::Agent;
 use crate::grid_env::{CellType, GridEnv};
-use crate::model::ModelScalar;
 
-pub struct Runner<T> {
+pub struct Runner {
     pub grid_env: GridEnv,
-    agent:  Agent<T>,
+    agent: Agent,
 }
 
-impl <T: ModelScalar> Runner<T> {
+impl Runner {
     const ACTIONS_LIMIT: usize = 2000;
 
-    pub fn new(grid_env: GridEnv, agent: Agent<T>) -> Self {
+    pub fn new(grid_env: GridEnv, agent: Agent) -> Self {
         Self { grid_env, agent }
     }
 
@@ -52,11 +51,14 @@ mod tests {
 
     fn test_runner(start: [usize; 2], cell: CellType) -> Runner {
         let model_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
-        let model = model::Loader::call(model_path).expect("repository ONNX model should load");
+        let (dtype, model) =
+            model::Loader::call(model_path).expect("repository ONNX model should load");
         let mut grid_env = GridEnv::new(1, 1);
         grid_env.start = start;
         grid_env.grid.set(0, 0, 0, cell);
-        let agent = Agent::new(model, [5, 5], [grid_env.width, grid_env.height]);
+        let agent =
+            crate::agent::new_by_type(dtype, model, [5, 5], [grid_env.width, grid_env.height])
+                .expect("model input type should be supported");
 
         Runner::new(grid_env, agent)
     }
