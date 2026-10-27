@@ -1,16 +1,16 @@
 use super::{RunnerError, Solution};
-use crate::agent::Agent;
+use crate::agent::DynAgent;
 use crate::grid_env::{CellType, GridEnv};
 
 pub struct Runner {
     pub grid_env: GridEnv,
-    agent: Agent,
+    agent: DynAgent,
 }
 
 impl Runner {
     const ACTIONS_LIMIT: usize = 2000;
 
-    pub fn new(grid_env: GridEnv, agent: Agent) -> Self {
+    pub fn new(grid_env: GridEnv, agent: DynAgent) -> Self {
         Self { grid_env, agent }
     }
 
@@ -27,8 +27,24 @@ impl Runner {
             }
 
             solution.timesteps += 1;
-            self.agent.update_memory(agent_pos, &self.grid_env);
-            let action = self.agent.select_action(agent_pos)?;
+            let action = match &mut self.agent {
+                DynAgent::Float32(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+                DynAgent::Int32(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+                DynAgent::Float64(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+                DynAgent::Int64(agent) => {
+                    agent.update_memory(agent_pos, &self.grid_env);
+                    agent.select_action(agent_pos)?
+                }
+            };
             let [dx, dy] = action.delta();
             let next_pos = [agent_pos[0] as isize + dx, agent_pos[1] as isize + dy];
 

@@ -2,7 +2,7 @@ mod agent;
 mod error;
 mod tensor_layer;
 
-pub use agent::{Agent, AgentInner};
+pub use agent::{Agent, DynAgent};
 pub use error::AgentError;
 pub use tensor_layer::TensorLayer;
 
@@ -14,19 +14,19 @@ pub fn new_by_type(
     model: Model,
     window_size: [usize; 2],
     memory_dims: [usize; 2],
-) -> Result<Agent, AgentError> {
+) -> Result<DynAgent, AgentError> {
     let agent = match data_type {
         TensorElementType::Float32 => {
-            Agent::Float32(AgentInner::<f32>::new(model, window_size, memory_dims))
+            DynAgent::Float32(Agent::<f32>::new(model, window_size, memory_dims))
         }
         TensorElementType::Int32 => {
-            Agent::Int32(AgentInner::<i32>::new(model, window_size, memory_dims))
+            DynAgent::Int32(Agent::<i32>::new(model, window_size, memory_dims))
         }
         TensorElementType::Float64 => {
-            Agent::Float64(AgentInner::<f64>::new(model, window_size, memory_dims))
+            DynAgent::Float64(Agent::<f64>::new(model, window_size, memory_dims))
         }
         TensorElementType::Int64 => {
-            Agent::Int64(AgentInner::<i64>::new(model, window_size, memory_dims))
+            DynAgent::Int64(Agent::<i64>::new(model, window_size, memory_dims))
         }
         other => {
             return Err(AgentError::ModelDataType(ort::Error::new(format!(
@@ -63,7 +63,7 @@ mod tests {
                 window_size,
                 memory_dims
             ),
-            Ok(Agent::Float32(_))
+            Ok(DynAgent::Float32(_))
         ));
         assert!(matches!(
             new_by_type(
@@ -72,7 +72,7 @@ mod tests {
                 window_size,
                 memory_dims
             ),
-            Ok(Agent::Int32(_))
+            Ok(DynAgent::Int32(_))
         ));
         assert!(matches!(
             new_by_type(
@@ -81,7 +81,7 @@ mod tests {
                 window_size,
                 memory_dims
             ),
-            Ok(Agent::Float64(_))
+            Ok(DynAgent::Float64(_))
         ));
         assert!(matches!(
             new_by_type(
@@ -90,7 +90,7 @@ mod tests {
                 window_size,
                 memory_dims
             ),
-            Ok(Agent::Int64(_))
+            Ok(DynAgent::Int64(_))
         ));
     }
 
