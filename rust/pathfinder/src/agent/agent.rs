@@ -14,16 +14,8 @@ pub struct Agent {
 
 impl Agent {
     pub fn new(model: Model, window_size: [usize; 2], memory_size: [usize; 2]) -> Self {
-        let known_env = Tensor::new(
-            TensorLayer::len(),
-            memory_size[1],
-            memory_size[0],
-        );
-        let observation_buffer = Tensor::new(
-            TensorLayer::len(), 
-            window_size[1], 
-            window_size[0]
-        );
+        let known_env = Tensor::new(TensorLayer::len(), memory_size[1], memory_size[0]);
+        let observation_buffer = Tensor::new(TensorLayer::len(), window_size[1], window_size[0]);
 
         Self {
             model,
@@ -125,7 +117,7 @@ impl Agent {
             .values()
             .next()
             .ok_or(AgentError::MissingModelOutput)?;
-        
+
         let (_shape, data) = output
             .try_extract_tensor::<f32>()
             .map_err(AgentError::OutputTensor)?;
