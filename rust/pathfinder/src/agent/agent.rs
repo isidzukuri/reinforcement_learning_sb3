@@ -125,6 +125,7 @@ impl Agent {
             .values()
             .next()
             .ok_or(AgentError::MissingModelOutput)?;
+        
         let (_shape, data) = output
             .try_extract_tensor::<f32>()
             .map_err(AgentError::OutputTensor)?;
