@@ -24,8 +24,7 @@ compiled solver that can be benchmarked against the Python version.
 
 ## Quick start
 
-For a complete end-to-end flow, see the package READMEs under [`python/`](./python/)
-and the benchmark scripts in [`benchmarks/`](./benchmarks/).
+For a complete end-to-end flow, see the package READMEs under [`benchmarks/`](./benchmarks/).
 
 ## Python packages
 
