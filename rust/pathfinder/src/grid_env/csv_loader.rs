@@ -55,7 +55,6 @@ impl CsvLoader {
 
     pub fn load_from(reader: impl BufRead) -> Result<GridEnv, CsvLoaderError> {
         let mut cells = Vec::new();
-        let mut height = 0;
         let mut width = None;
         let mut start = [0, 0];
         let mut path_length = 0;
@@ -83,11 +82,11 @@ impl CsvLoader {
                 _ => {}
             }
 
-            height += 1;
             cells.extend(row);
         }
 
         let width = width.ok_or(CsvLoaderError::EmptyOrInvalidGrid)?;
+        let height = cells.len() / width;
 
         Ok(GridEnv {
             width,
