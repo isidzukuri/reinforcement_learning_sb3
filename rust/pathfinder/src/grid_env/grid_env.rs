@@ -1,8 +1,6 @@
 use super::CellType;
 use crate::tensor::Tensor;
 
-use std::collections::HashMap;
-
 #[derive(Debug)]
 pub struct GridEnv {
     pub width: usize,
@@ -10,7 +8,6 @@ pub struct GridEnv {
     pub grid: Tensor<CellType>,
     pub start: [usize; 2],
     pub path_length: usize,
-    pub cells_count: HashMap<CellType, usize>,
 }
 
 impl GridEnv {
@@ -23,7 +20,6 @@ impl GridEnv {
             start: [0, 0],
             path_length: 0,
             grid: Tensor::new(1, height, width),
-            cells_count: HashMap::new(),
         }
     }
 
@@ -91,7 +87,6 @@ mod tests {
         assert_eq!(env.height, 2);
         assert_eq!(env.start, [0, 0]);
         assert_eq!(env.path_length, 0);
-        assert!(env.cells_count.is_empty());
         assert_eq!(env.grid.channels(), 1);
         assert_eq!(env.grid.width(), 3);
         assert_eq!(env.grid.height(), 2);

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use super::GridEnv;
@@ -19,11 +20,20 @@ impl Printer {
             output.push_str(&format!("Actual Taken Path Length: {}\n", path.len()));
         }
 
+        let cells_count = env
+            .grid
+            .as_slice()
+            .iter()
+            .fold(HashMap::new(), |mut counter, cell| {
+                *counter.entry(cell.clone()).or_insert(0) += 1;
+                counter
+            });
+
         output.push_str("TYPES:\n");
-        for (name, count) in &env.cells_count {
+        for (name, count) in cells_count {
             output.push_str(&format!(
                 "  - {:?}: id: {}, count: {:?}\n",
-                name, *name as u8, count
+                name, name as u8, count
             ));
         }
         output.push_str("ACTIONS: [Top, Bottom, Left, Right]\n");
