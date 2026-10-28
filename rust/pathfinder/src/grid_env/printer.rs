@@ -21,11 +21,11 @@ impl Printer<'_> {
     fn render_to_string(&self) -> String {
         let mut output = String::with_capacity(self.output_capacity());
 
-        let _ = writeln!(output, "=== GridEnv Configuration ===");
+        output.push_str("=== GridEnv Configuration ===\n");
         self.output_size(&mut output);
         self.output_path(&mut output);
         self.output_cell_types(&mut output);
-        let _ = writeln!(output, "ACTIONS: [Top, Bottom, Left, Right]");
+        output.push_str("ACTIONS: [Top, Bottom, Left, Right]\n");
         self.output_matrix(&mut output);
         output
     }
@@ -76,7 +76,7 @@ impl Printer<'_> {
                 let cell_id = cell as u8;
 
                 if x > 0 {
-                    output.push(' ');
+                    output.push_str(" ");
                 }
 
                 if path_cells.contains(&(x, y)) {
@@ -85,7 +85,7 @@ impl Printer<'_> {
                     let _ = write!(output, "{:2}", cell_id);
                 }
             }
-            output.push('\n');
+            output.push_str("\n");
         }
         let _ = writeln!(output, "============================");
     }
