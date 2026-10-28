@@ -13,11 +13,11 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub fn new(model: Model, window_size: [usize; 2], memory_dimensions: [usize; 2]) -> Self {
+    pub fn new(model: Model, window_size: [usize; 2], memory_size: [usize; 2]) -> Self {
         let known_env = Tensor::new(
             TensorLayer::len(),
-            memory_dimensions[1],
-            memory_dimensions[0],
+            memory_size[1],
+            memory_size[0],
         );
         let observation_buffer = Tensor::new(
             TensorLayer::len(), 
@@ -209,10 +209,10 @@ mod tests {
     use crate::model_loader::call;
     use std::path::Path;
 
-    fn test_agent(window_size: [usize; 2], memory_dimensions: [usize; 2]) -> Agent {
+    fn test_agent(window_size: [usize; 2], memory_size: [usize; 2]) -> Agent {
         let model_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("runtime/model.onnx");
         let model = call(model_path).expect("repository ONNX model should load");
-        Agent::new(model, window_size, memory_dimensions)
+        Agent::new(model, window_size, memory_size)
     }
 
     fn test_grid() -> GridEnv {
