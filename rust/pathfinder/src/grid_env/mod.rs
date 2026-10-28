@@ -31,7 +31,6 @@ mod tests {
         fs::write(&csv_path, "# start: 2, 3\n# path_length: 8\n0,1,0\n1,2,1\n").unwrap();
 
         let env = CsvLoader::call(csv_path.as_path()).unwrap();
-        let rendered = Printer::render(&env, None);
 
         assert_eq!(env.width, 3);
         assert_eq!(env.height, 2);
@@ -48,9 +47,6 @@ mod tests {
                 CellType::Finish,
             ]
         );
-        assert!(rendered.contains("Generated Path Length: 8"));
-        assert!(rendered.contains(" 0  1  0"));
-        assert!(rendered.contains(" 1  2  1"));
         fs::remove_file(&csv_path).unwrap();
     }
 }

@@ -27,7 +27,7 @@ pub fn call(
 
     if solution.success {
         println!("Path is found after {} iterations", solution.timesteps);
-        Printer::print(&runner.grid_env, Some(&solution.path));
+        Printer::call(&runner.grid_env, Some(&solution.path));
     } else {
         println!("Agent did not reach the finish.");
     }
