@@ -64,6 +64,7 @@ impl Printer<'_> {
             );
         }
     }
+    
     fn output_matrix(&self, output: &mut String) {
         let _ = writeln!(output, "\n=== Grid Matrix ===");
 
