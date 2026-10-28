@@ -34,4 +34,12 @@ mod tests {
         assert_eq!(CellType::Bonus as u8, 2);
         assert_eq!(CellType::Wall as u8, 3);
     }
+
+    #[test]
+    fn cell_types_parsed_from_string() {
+        assert_eq!("0".parse::<CellType>().unwrap(), CellType::Empty);
+        assert_eq!("1".parse::<CellType>().unwrap(), CellType::Finish);
+        assert_eq!("2".parse::<CellType>().unwrap(), CellType::Bonus);
+        assert_eq!("3".parse::<CellType>().unwrap(), CellType::Wall);
+    }
 }
