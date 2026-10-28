@@ -48,7 +48,7 @@ impl std::error::Error for CsvLoaderError {
 }
 
 impl CsvLoader {
-    pub fn call(path_to_file: &Path) -> Result<GridEnv, CsvLoaderError> {
+    pub fn call(path_to_file: impl AsRef<Path>) -> Result<GridEnv, CsvLoaderError> {
         let file = File::open(path_to_file).map_err(CsvLoaderError::Io)?;
         Self::load_from(BufReader::new(file))
     }

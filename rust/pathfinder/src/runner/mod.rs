@@ -18,7 +18,7 @@ pub fn call(
     grid_file_path: impl AsRef<Path>,
     model_file_path: impl AsRef<Path>,
 ) -> Result<(), RunnerError> {
-    let grid_env = CsvLoader::call(grid_file_path.as_ref()).map_err(RunnerError::CsvLoader)?;
+    let grid_env = CsvLoader::call(grid_file_path).map_err(RunnerError::CsvLoader)?;
     let model = model_loader::call(model_file_path).map_err(RunnerError::ModelLoader)?;
     let agent = Agent::new(model, AGENT_WINDOW_SIZE, [grid_env.width, grid_env.height]);
 
