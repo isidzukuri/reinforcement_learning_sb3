@@ -1,23 +1,12 @@
 use std::str::FromStr;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CellType {
     #[default]
     Empty = 0,
     Finish = 1,
     Bonus = 2,
     Wall = 3,
-}
-
-impl CellType {
-    pub const fn count(self) -> Option<usize> {
-        match self {
-            CellType::Empty => None,
-            CellType::Finish => Some(1),
-            CellType::Bonus => Some(5),
-            CellType::Wall => Some(15),
-        }
-    }
 }
 
 impl FromStr for CellType {
@@ -44,10 +33,5 @@ mod tests {
         assert_eq!(CellType::Finish as u8, 1);
         assert_eq!(CellType::Bonus as u8, 2);
         assert_eq!(CellType::Wall as u8, 3);
-
-        assert_eq!(CellType::Empty.count(), None);
-        assert_eq!(CellType::Finish.count(), Some(1));
-        assert_eq!(CellType::Bonus.count(), Some(5));
-        assert_eq!(CellType::Wall.count(), Some(15));
     }
 }

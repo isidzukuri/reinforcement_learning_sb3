@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io;
@@ -88,12 +89,18 @@ impl CsvLoader {
         let width = width.ok_or(CsvLoaderError::EmptyOrInvalidGrid)?;
         let height = cells.len() / width;
 
+        let cells_count = cells.iter().fold(HashMap::new(), |mut counter, cell| {
+            *counter.entry(cell.clone()).or_insert(0) += 1;
+            counter
+        });
+
         Ok(GridEnv {
             width,
             height,
-            grid: Tensor::from_vec(1, height, width, cells),
             start,
+            cells_count,
             path_length,
+            grid: Tensor::from_vec(1, height, width, cells),
         })
     }
 
@@ -178,6 +185,19 @@ mod tests {
         assert_eq!(grid.start, [1, 0]);
         assert_eq!(grid.path_length, 4);
         assert_eq!(grid.grid.as_slice(), &[CellType::Empty, CellType::Finish]);
+        assert_eq!(grid.cells_count.get(&CellType::Empty), Some(&1));
+        assert_eq!(grid.cells_count.get(&CellType::Finish), Some(&1));
+    }
+
+    #[test]
+    fn load_from_counts_each_cell_type() {
+        let grid = CsvLoader::load_from(Cursor::new("0,0,1\n2,3,3\n")).unwrap();
+
+        assert_eq!(grid.cells_count.get(&CellType::Empty), Some(&2));
+        assert_eq!(grid.cells_count.get(&CellType::Finish), Some(&1));
+        assert_eq!(grid.cells_count.get(&CellType::Bonus), Some(&1));
+        assert_eq!(grid.cells_count.get(&CellType::Wall), Some(&2));
+        assert_eq!(grid.cells_count.len(), 4);
     }
 
     #[test]

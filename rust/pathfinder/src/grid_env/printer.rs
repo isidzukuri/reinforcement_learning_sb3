@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::{CellType, GridEnv};
+use super::GridEnv;
 
 pub struct Printer;
 
@@ -20,14 +20,11 @@ impl Printer {
         }
 
         output.push_str("TYPES:\n");
-        let types = [
-            ("Empty", CellType::Empty as u8, CellType::Empty.count()),
-            ("Finish", CellType::Finish as u8, CellType::Finish.count()),
-            ("Bonus", CellType::Bonus as u8, CellType::Bonus.count()),
-            ("Wall", CellType::Wall as u8, CellType::Wall.count()),
-        ];
-        for (name, id, count) in types {
-            output.push_str(&format!("  - {}: id: {}, count: {:?}\n", name, id, count));
+        for (name, count) in &env.cells_count {
+            output.push_str(&format!(
+                "  - {:?}: id: {}, count: {:?}\n",
+                name, *name as u8, count
+            ));
         }
         output.push_str("ACTIONS: [Top, Bottom, Left, Right]\n");
         output.push_str("\n=== Grid Matrix ===\n");
