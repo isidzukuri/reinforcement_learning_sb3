@@ -84,6 +84,7 @@ mod tests {
         assert!(rendered.contains("Generated Path Length: 0"));
         assert!(rendered.contains("Actual Taken Path Length: 2"));
         assert!(rendered.contains("TYPES:"));
+        assert!(rendered.contains("Empty: id: 0, count: 4"));
         assert!(rendered.contains("ACTIONS: [Top, Bottom, Left, Right]"));
         assert!(rendered.contains("=== Grid Matrix ==="));
         assert!(rendered.contains("\u{1b}[48;2;144;238;144m"));
