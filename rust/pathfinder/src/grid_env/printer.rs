@@ -19,7 +19,7 @@ impl Printer<'_> {
     }
 
     fn render_to_string(&self) -> String {
-        let mut output = String::with_capacity(self.output_capacity());
+        let mut output = String::with_capacity(self.capacity());
 
         output.push_str("=== GridEnv Configuration ===\n");
         self.output_size(&mut output);
@@ -30,7 +30,7 @@ impl Printer<'_> {
         output
     }
 
-    fn output_capacity(&self) -> usize {
+    fn capacity(&self) -> usize {
         Self::BASE_HEADER_CAPACITY
             + (self.env.width * self.env.height * Self::BYTES_PER_CELL_ESTIMATE)
     }
